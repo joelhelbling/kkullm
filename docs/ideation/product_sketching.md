@@ -1,6 +1,12 @@
 # Kkullm Product Sketching
 
+## Product Vision
+
 What is Kkullm?
+
+Kkullm is planned as an open-source, self-hosted system, with a web UI for humans, and an API+CLI
+for AI agents.  It should be as self-contained as possible, and should leverage free and easy
+components such as SqlLite for storage.
 
 ## Thoughts
 
