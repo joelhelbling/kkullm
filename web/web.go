@@ -19,8 +19,12 @@ type WebServer struct {
 }
 
 func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
+	initTemplates()
+
 	ws := &WebServer{store: s, events: events}
-	_ = ws // handlers added in later tasks
+
+	// Root page
+	mux.HandleFunc("GET /{$}", ws.handleRoot)
 
 	// Static files
 	staticFS, err := fs.Sub(content, "static")
