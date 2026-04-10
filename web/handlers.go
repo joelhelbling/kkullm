@@ -227,9 +227,12 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 	bd := groupCards(cards, showProject)
 	bd.BlockedCards = nil // blocked column is always global, not per-scope
 
-	blockedCards, _ := ws.store.ListCards(store.CardListParams{
+	blockedCards, blockedErr := ws.store.ListCards(store.CardListParams{
 		Status: "blocked",
 	})
+	if blockedErr != nil {
+		log.Printf("list blocked cards: %v", blockedErr)
+	}
 	for _, c := range blockedCards {
 		bd.BlockedCards = append(bd.BlockedCards, cardView{Card: c, ShowProject: true})
 	}
