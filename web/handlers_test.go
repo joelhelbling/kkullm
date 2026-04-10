@@ -143,6 +143,73 @@ func TestDrawerHandler(t *testing.T) {
 	}
 }
 
+func TestStatusChange(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Status test",
+		Status:    "considering",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// Valid transition: considering -> todo
+	req, _ := http.NewRequest("PATCH",
+		ts.URL+fmt.Sprintf("/ui/cards/%d/status", card.ID),
+		strings.NewReader("status=todo"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("PATCH status: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	updated, _ := st.GetCard(card.ID)
+	if updated.Status != "todo" {
+		t.Errorf("expected status 'todo', got %q", updated.Status)
+	}
+}
+
+func TestStatusChangeInvalid(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Invalid transition test",
+		Status:    "considering",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// Invalid transition: considering -> in_flight (must go through todo first)
+	req, _ := http.NewRequest("PATCH",
+		ts.URL+fmt.Sprintf("/ui/cards/%d/status", card.ID),
+		strings.NewReader("status=in_flight"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("PATCH status: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 422 {
+		t.Fatalf("expected 422, got %d", resp.StatusCode)
+	}
+}
+
 func TestBoardAgentScoped(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
