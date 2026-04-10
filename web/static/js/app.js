@@ -140,12 +140,13 @@ function kkullm() {
     initSortable() {
       const columns = document.querySelectorAll('.column-cards[data-status]');
       columns.forEach((column) => {
-        // Blocked column is not draggable — status transitions to/from blocked
-        // happen via the drawer's status selector, not drag-and-drop.
-        if (column.id === 'blocked-cards') return;
         if (column._sortable) column._sortable.destroy();
+        // Blocked column: cards can be pulled OUT (user resolves blocker)
+        // but nothing can be dragged IN — agents escalate to blocked via
+        // the drawer's status selector, not drag-and-drop.
+        const isBlocked = column.id === 'blocked-cards';
         column._sortable = new Sortable(column, {
-          group: 'cards',
+          group: { name: 'cards', pull: true, put: !isBlocked },
           animation: 200,
           ghostClass: 'sortable-ghost',
           chosenClass: 'sortable-chosen',
@@ -172,8 +173,25 @@ function kkullm() {
           resp.text().then((msg) => this.showToast(msg));
         } else {
           resp.text().then((html) => {
-            cardEl.outerHTML = html;
+            // Replace the card tile with the server-rendered HTML, then
+            // tell htmx to process the new element so its hx-* attributes
+            // (notably hx-get for the drawer) become active.
+            const template = document.createElement('template');
+            template.innerHTML = html.trim();
+            const newEl = template.content.firstElementChild;
+            if (newEl) {
+              cardEl.replaceWith(newEl);
+              htmx.process(newEl);
+            }
             this.updateColumnCounts();
+            // If we dragged OUT of blocked, update blocker state
+            if (oldStatus === 'blocked') {
+              this.blockerCount = Math.max(0, this.blockerCount - 1);
+              if (this.blockerCount === 0) {
+                this.blockersOpen = false;
+                this.syncBlockedColumnVisibility();
+              }
+            }
           });
         }
       });
