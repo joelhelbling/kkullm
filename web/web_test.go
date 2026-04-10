@@ -68,5 +68,10 @@ func TestStaticVendorJS(t *testing.T) {
 		if resp.StatusCode != 200 {
 			t.Errorf("expected 200 for %s, got %d", file, resp.StatusCode)
 		}
+
+		ct := resp.Header.Get("Content-Type")
+		if !strings.Contains(ct, "javascript") {
+			t.Errorf("expected JS Content-Type for %s, got %q", file, ct)
+		}
 	}
 }

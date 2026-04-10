@@ -2,6 +2,7 @@ package web
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"net/http"
 
@@ -22,6 +23,9 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	_ = ws // handlers added in later tasks
 
 	// Static files
-	staticFS, _ := fs.Sub(content, "static")
+	staticFS, err := fs.Sub(content, "static")
+	if err != nil {
+		panic(fmt.Sprintf("web: static subtree missing from embed: %v", err))
+	}
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 }
