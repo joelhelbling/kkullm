@@ -344,3 +344,18 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 		log.Printf("render board: %v", err)
 	}
 }
+
+func (ws *WebServer) handleBlockers(w http.ResponseWriter, r *http.Request) {
+	cards, err := ws.store.ListCards(store.CardListParams{
+		Status: "blocked",
+	})
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(w, "blockers", cards); err != nil {
+		log.Printf("render blockers: %v", err)
+	}
+}
