@@ -17,11 +17,13 @@ function kkullm() {
       this.initTheme();
       this.connectSSE();
 
-      // After htmx swaps in the board, initialize SortableJS
-      document.body.addEventListener('htmx:afterSwap', (e) => {
+      // htmx:afterSettle runs after htmx is done manipulating attributes,
+      // so our DOM edits won't be overwritten by htmx's attribute merging.
+      document.body.addEventListener('htmx:afterSettle', (e) => {
         if (e.detail.target.id === 'board-container') {
           this.$nextTick(() => this.initSortable());
           this.updateBlockerCount();
+          this.syncBlockedColumnVisibility();
         }
         if (e.detail.target.id === 'drawer-container') {
           this.drawerOpen = true;
@@ -100,8 +102,23 @@ function kkullm() {
 
     toggleBlockers() {
       this.blockersOpen = !this.blockersOpen;
+      this.syncBlockedColumnVisibility();
       if (this.blockersOpen) {
-        htmx.trigger(document.body, 'blockers-refresh');
+        this.refreshBlockers();
+      }
+    },
+
+    refreshBlockers() {
+      htmx.ajax('GET', '/ui/blockers', {
+        target: '#blocked-cards',
+        swap: 'innerHTML',
+      });
+    },
+
+    syncBlockedColumnVisibility() {
+      const col = document.getElementById('blocked-column');
+      if (col) {
+        col.classList.toggle('blocked-hidden', !this.blockersOpen);
       }
     },
 
@@ -114,6 +131,7 @@ function kkullm() {
       }
       if (this.blockerCount === 0) {
         this.blockersOpen = false;
+        this.syncBlockedColumnVisibility();
       }
     },
 
@@ -213,9 +231,10 @@ function kkullm() {
       const oldColumn = cardEl.closest('.column-cards');
       const oldStatus = oldColumn ? oldColumn.dataset.status : null;
 
-      // Transitions involving the blocked column can't use FLIP:
-      // the blocked column is hidden via x-show, so measuring its
-      // position returns garbage. Update blocker state then reload the board.
+      // Transitions involving the blocked column can't use FLIP
+      // because the blocked column's position changes when it opens.
+      // Update blocker state then reload the board — afterSwap will
+      // call syncBlockedColumnVisibility() with the fresh DOM.
       if (card.status === 'blocked' || oldStatus === 'blocked') {
         if (card.status === 'blocked') {
           this.blockerCount++;

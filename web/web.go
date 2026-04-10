@@ -38,10 +38,14 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	// Blockers column (all blocked cards across all projects)
 	mux.HandleFunc("GET /ui/blockers", ws.handleBlockers)
 
-	// Static files
+	// Static files (no-cache during development so edits are visible on reload)
 	staticFS, err := fs.Sub(content, "static")
 	if err != nil {
 		panic(fmt.Sprintf("web: static subtree missing from embed: %v", err))
 	}
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+	staticHandler := http.StripPrefix("/static/", http.FileServer(http.FS(staticFS)))
+	mux.Handle("GET /static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		staticHandler.ServeHTTP(w, r)
+	}))
 }
