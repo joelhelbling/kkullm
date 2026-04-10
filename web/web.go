@@ -35,6 +35,9 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	// Status change (drag-and-drop or drawer selector)
 	mux.HandleFunc("PATCH /ui/cards/{id}/status", ws.handleStatusChange)
 
+	// Blockers column (all blocked cards across all projects)
+	mux.HandleFunc("GET /ui/blockers", ws.handleBlockers)
+
 	// Static files
 	staticFS, err := fs.Sub(content, "static")
 	if err != nil {

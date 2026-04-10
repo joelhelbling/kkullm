@@ -1,0 +1,24 @@
+{{define "blockers"}}
+{{range .}}
+<div class="card-tile"
+     data-card-id="{{.ID}}"
+     hx-get="/ui/cards/{{.ID}}/drawer"
+     hx-target="#drawer-container"
+     hx-swap="innerHTML">
+  <div class="card-tile-project">
+    <span class="project-badge" style="background:{{projectColor .Project}};color:white;">{{.Project}}</span>
+  </div>
+  <div class="card-tile-title">{{.Title}}</div>
+  {{if .Relations}}
+  <div style="font-size:10px;color:var(--text-secondary);margin-top:4px;">
+    {{range .Relations}}
+    {{if eq .RelationType "blocked_by"}}blocked_by #{{.RelatedCardID}}{{end}}
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}
+{{if not .}}
+<div style="font-size:12px;color:var(--text-secondary);padding:8px;">No blocked cards.</div>
+{{end}}
+{{end}}

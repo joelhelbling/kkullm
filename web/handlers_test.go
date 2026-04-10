@@ -253,3 +253,38 @@ func TestBoardAgentScoped(t *testing.T) {
 		t.Error("expected agent-scoped board to show project-of-origin badges")
 	}
 }
+
+func TestBlockersHandler(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	// Create a card, move it to todo, then blocked
+	card, _ := st.CreateCard(store.CardCreateParams{
+		Title:     "Blocked card",
+		Status:    "todo",
+		ProjectID: 1,
+		Assignees: []string{"user"},
+	})
+
+	blockedStatus := "blocked"
+	st.UpdateCard(card.ID, store.CardUpdateParams{Status: &blockedStatus})
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/ui/blockers")
+	if err != nil {
+		t.Fatalf("GET /ui/blockers: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	if !strings.Contains(body, "Blocked card") {
+		t.Error("expected blockers to contain blocked card")
+	}
+}
