@@ -286,11 +286,12 @@ The core agent interaction pattern:
 
 ### Session 1: Prioritization
 
-1. Claude Code starts → hook calls `kkullm card list --status todo,considering,blocked --format full`
+1. Claude Code starts → hook calls `kkullm card list --status in_flight,todo,blocked --format full`
 2. Agent receives all actionable cards with relations, tags, comment counts, age.
-3. Agent reasons about priority, dependencies, duplicates using its own rubric.
-4. Agent writes a focused prompt to a file, designating the target card and referencing related cards.
-5. Agent terminates. This session is disposable — its purpose is context-heavy triage without polluting the work session.
+3. Agent checks for `in_flight` cards assigned to itself first — these represent interrupted work and are highest priority (resume before starting new work).
+4. Agent reasons about remaining priority, dependencies, duplicates using its own rubric.
+5. Agent writes a focused prompt to a file, designating the target card and referencing related cards.
+6. Agent terminates. This session is disposable — its purpose is context-heavy triage without polluting the work session.
 
 ### Session 2: Execution
 
