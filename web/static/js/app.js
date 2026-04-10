@@ -87,7 +87,6 @@ function kkullm() {
       }
 
       htmx.ajax('GET', url, { target: '#board-container', swap: 'innerHTML' });
-      this.blockersOpen = false;
     },
 
     // === Drawer ===
@@ -214,25 +213,37 @@ function kkullm() {
       const oldColumn = cardEl.closest('.column-cards');
       const oldStatus = oldColumn ? oldColumn.dataset.status : null;
 
+      // Transitions involving the blocked column can't use FLIP:
+      // the blocked column is hidden via x-show, so measuring its
+      // position returns garbage. Update blocker state then reload the board.
+      if (card.status === 'blocked' || oldStatus === 'blocked') {
+        if (card.status === 'blocked') {
+          this.blockerCount++;
+          this.blockersOpen = true;
+        } else {
+          this.blockerCount = Math.max(0, this.blockerCount - 1);
+          if (this.blockerCount === 0) {
+            this.blockersOpen = false;
+          }
+        }
+
+        this.loadBoard();
+
+        if (this.drawerOpen && this.drawerCardId === card.id) {
+          htmx.ajax('GET', '/ui/cards/' + card.id + '/drawer', {
+            target: '#drawer-container',
+            swap: 'innerHTML',
+          });
+        }
+        return;
+      }
+
+      // Regular status change: FLIP animation between visible columns.
       if (oldStatus && oldStatus !== card.status) {
         this.flipCard(cardEl, card);
       } else {
         cardEl.classList.add('highlight');
         setTimeout(() => cardEl.classList.remove('highlight'), 1500);
-      }
-
-      if (card.status === 'blocked') {
-        this.blockerCount++;
-        if (!this.blockersOpen) {
-          this.blockersOpen = true;
-        }
-        htmx.trigger(document.body, 'blockers-refresh');
-      } else if (oldStatus === 'blocked') {
-        this.blockerCount = Math.max(0, this.blockerCount - 1);
-        if (this.blockerCount === 0) {
-          this.blockersOpen = false;
-        }
-        htmx.trigger(document.body, 'blockers-refresh');
       }
 
       if (this.drawerOpen && this.drawerCardId === card.id) {
