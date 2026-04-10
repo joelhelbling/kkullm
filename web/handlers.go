@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joelhelbling/kkullm/api"
 	"github.com/joelhelbling/kkullm/model"
 	"github.com/joelhelbling/kkullm/store"
 )
@@ -219,6 +220,67 @@ func (ws *WebServer) handleDrawer(w http.ResponseWriter, r *http.Request) {
 		Transitions: transitions,
 	}); err != nil {
 		log.Printf("render drawer: %v", err)
+	}
+}
+
+func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid id", 400)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form data", 400)
+		return
+	}
+
+	newStatus := r.FormValue("status")
+	if newStatus == "" {
+		http.Error(w, "status is required", 400)
+		return
+	}
+
+	card, err := ws.store.UpdateCard(id, store.CardUpdateParams{
+		Status: &newStatus,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), 422)
+		return
+	}
+
+	ws.events.Publish(api.Event{Type: "card_updated", Data: card})
+
+	// Decide response format based on the htmx target header.
+	// When the click came from the drawer's status selector, htmx sets
+	// HX-Target to "drawer-container" (the id of the target element).
+	// When the click came from drag-and-drop on the board, we don't
+	// target the drawer — return just the updated card tile.
+	hxTarget := r.Header.Get("HX-Target")
+	if hxTarget == "drawer-container" {
+		comments, err := ws.store.ListComments(id)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		if comments == nil {
+			comments = []model.Comment{}
+		}
+		transitions := model.AllowedTransitions(card.Status)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(w, "drawer", drawerData{
+			Card:        card,
+			Comments:    comments,
+			Transitions: transitions,
+		}); err != nil {
+			log.Printf("render drawer: %v", err)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(w, "card", cardView{Card: *card, ShowProject: false}); err != nil {
+		log.Printf("render card: %v", err)
 	}
 }
 
