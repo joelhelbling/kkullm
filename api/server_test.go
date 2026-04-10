@@ -271,6 +271,38 @@ func TestCardComments(t *testing.T) {
 	}
 }
 
+func TestServerEventBus(t *testing.T) {
+	database, err := db.Open(":memory:")
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer database.Close()
+	if err := db.Migrate(database); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+
+	s := NewServer(store.New(database))
+	eb := s.EventBus()
+	if eb == nil {
+		t.Fatal("expected non-nil EventBus")
+	}
+
+	// Verify it's functional
+	ch := eb.Subscribe()
+	defer eb.Unsubscribe(ch)
+
+	eb.Publish(Event{Type: "test", Data: "hello"})
+
+	select {
+	case e := <-ch:
+		if e.Type != "test" {
+			t.Errorf("expected event type 'test', got %q", e.Type)
+		}
+	default:
+		t.Fatal("expected to receive event")
+	}
+}
+
 func TestSSEStream(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()

@@ -19,6 +19,10 @@ func NewServer(s *store.Store) *Server {
 	}
 }
 
+func (s *Server) EventBus() *EventBus {
+	return s.events
+}
+
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
