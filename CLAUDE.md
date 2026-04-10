@@ -27,4 +27,4 @@ Kkullm is planned as an open-source, self-hosted system, with a web UI for human
 
 ## Project Status
 
-Early ideation phase. No code yet — only design documents in `docs/ideation/`.
+Early-stage implementation. Working today: Go backend, HTTP API, SQLite store (via `modernc.org/sqlite`, no CGO), server-rendered web UI with SSE live updates, and a Cobra-based CLI. Design documents live in `docs/ideation/`; specs and implementation plans live in `docs/superpowers/`.
