@@ -26,7 +26,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&serverURL, "server", envOrDefault("KKULLM_SERVER", "http://localhost:8080"), "Kkullm server URL")
+	rootCmd.PersistentFlags().StringVar(&serverURL, "server", envOrDefault("KKULLM_SERVER", "http://localhost:7722"), "Kkullm server URL")
 	rootCmd.PersistentFlags().StringVar(&agentName, "as", os.Getenv("KKULLM_AGENT"), "Agent identity")
 	rootCmd.PersistentFlags().StringVar(&projectName, "project", os.Getenv("KKULLM_PROJECT"), "Default project")
 }

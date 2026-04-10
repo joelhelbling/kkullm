@@ -35,7 +35,7 @@ go install github.com/joelhelbling/kkullm@latest
 kkullm serve
 ```
 
-Then open [http://localhost:8080](http://localhost:8080). A SQLite file `kkullm.db` is created in the working directory. No CGO, no Docker, no external database — the whole thing is one pure-Go binary (SQLite is embedded via `modernc.org/sqlite`).
+Then open [http://localhost:7722](http://localhost:7722). A SQLite file `kkullm.db` is created in the working directory. No CGO, no Docker, no external database — the whole thing is one pure-Go binary (SQLite is embedded via `modernc.org/sqlite`).
 
 To drive the board from the CLI:
 

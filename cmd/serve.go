@@ -48,7 +48,7 @@ var serveCmd = &cobra.Command{
 }
 
 func init() {
-	serveCmd.Flags().StringVar(&serveAddr, "addr", ":8080", "Listen address")
+	serveCmd.Flags().StringVar(&serveAddr, "addr", ":7722", "Listen address")
 	serveCmd.Flags().StringVar(&dbPath, "db", "kkullm.db", "Database file path")
 	rootCmd.AddCommand(serveCmd)
 }
