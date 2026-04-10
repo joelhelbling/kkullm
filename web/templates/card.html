@@ -1,0 +1,28 @@
+{{define "card"}}
+<div class="card-tile{{if eq .Status "in_flight"}} in-flight{{end}}"
+     data-card-id="{{.ID}}"
+     hx-get="/ui/cards/{{.ID}}/drawer"
+     hx-target="#drawer-container"
+     hx-swap="innerHTML">
+  {{if .ShowProject}}
+  <div class="card-tile-project">
+    <span class="project-badge" style="background:{{projectColor .Project}};color:white;">{{.Project}}</span>
+  </div>
+  {{end}}
+  <div class="card-tile-title">{{.Title}}</div>
+  {{if .Tags}}
+  <div class="card-tile-tags">
+    {{range .Tags}}
+    <span class="tag" style="background:{{tagBg .}};color:{{tagColor .}};">{{.}}</span>
+    {{end}}
+  </div>
+  {{end}}
+  <div class="card-tile-footer">
+    <span>{{if .Assignees}}{{joinStrings .Assignees ", "}}{{else}}unassigned{{end}}</span>
+    <span class="card-tile-meta">
+      {{if gt .CommentCount 0}}<span>&#x1F4AC; {{.CommentCount}}</span>{{end}}
+      {{if .Relations}}<span>&#x1F517; {{len .Relations}}</span>{{end}}
+    </span>
+  </div>
+</div>
+{{end}}

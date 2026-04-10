@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/joelhelbling/kkullm/store"
 )
 
 func TestRootHandler(t *testing.T) {
@@ -45,5 +47,75 @@ func TestRootHandler(t *testing.T) {
 		if !strings.Contains(body, check) {
 			t.Errorf("expected body to contain %q", check)
 		}
+	}
+}
+
+func TestBoardProjectScoped(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	_, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Test card",
+		Status:    "todo",
+		ProjectID: 1, // orchestration project from seed
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/ui/board?project=1")
+	if err != nil {
+		t.Fatalf("GET /ui/board: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	if !strings.Contains(body, "Test card") {
+		t.Error("expected board to contain card title")
+	}
+	if !strings.Contains(body, `data-status="todo"`) {
+		t.Error("expected board to contain todo column with data-status")
+	}
+}
+
+func TestBoardAgentScoped(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	_, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Agent card",
+		Status:    "in_flight",
+		ProjectID: 1,
+		Assignees: []string{"user"},
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/ui/board?agent=1")
+	if err != nil {
+		t.Fatalf("GET /ui/board?agent=1: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	if !strings.Contains(body, "Agent card") {
+		t.Error("expected board to contain agent's card")
 	}
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/joelhelbling/kkullm/store"
 )
 
-func setupTestMux(t *testing.T) *http.ServeMux {
+func setupTestMuxWithStore(t *testing.T) (*http.ServeMux, *store.Store) {
 	t.Helper()
 	database, err := db.Open(":memory:")
 	if err != nil {
@@ -29,6 +29,11 @@ func setupTestMux(t *testing.T) *http.ServeMux {
 	srv := api.NewServer(s)
 	mux := http.NewServeMux()
 	RegisterRoutes(mux, s, srv.EventBus())
+	return mux, s
+}
+
+func setupTestMux(t *testing.T) *http.ServeMux {
+	mux, _ := setupTestMuxWithStore(t)
 	return mux
 }
 
