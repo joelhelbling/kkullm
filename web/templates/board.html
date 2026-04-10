@@ -1,0 +1,95 @@
+{{define "board"}}
+<div class="board" id="board" x-ref="board">
+  {{$blocked := .BlockedCards}}
+
+  <div class="column" data-status="considering">
+    <div class="column-header">
+      <span>Considering</span>
+      <span class="column-count">{{len .Considering}}</span>
+    </div>
+    <div class="column-cards" data-status="considering">
+      {{range .Considering}}{{template "card" .}}{{end}}
+    </div>
+  </div>
+
+  <div class="column" data-status="todo">
+    <div class="column-header">
+      <span>Todo</span>
+      <span class="column-count">{{len .Todo}}</span>
+    </div>
+    <div class="column-cards" data-status="todo">
+      {{range .Todo}}{{template "card" .}}{{end}}
+    </div>
+  </div>
+
+  <div class="column column-blocked"
+       x-show="blockersOpen"
+       x-transition:enter-start="column-blocked-enter"
+       x-transition:enter-end="column-blocked-active"
+       x-transition:leave-start="column-blocked-active"
+       x-transition:leave-end="column-blocked-enter"
+       id="blocked-column">
+    <div class="column-header">
+      <span>&#x26A0; Blocked</span>
+      <span class="column-count" id="blocked-count">{{len $blocked}}</span>
+    </div>
+    <div class="column-cards" id="blocked-cards"
+         hx-get="/ui/blockers"
+         hx-trigger="blockers-refresh from:body"
+         hx-swap="innerHTML">
+      {{range $blocked}}{{template "card" .}}{{end}}
+    </div>
+  </div>
+
+  <div class="column" data-status="in_flight">
+    <div class="column-header">
+      <span>In Flight</span>
+      <span class="column-count">{{len .InFlight}}</span>
+    </div>
+    <div class="column-cards" data-status="in_flight">
+      {{range .InFlight}}{{template "card" .}}{{end}}
+    </div>
+  </div>
+
+  <div class="column" data-status="completed">
+    <div class="column-header">
+      <span>Completed</span>
+      <span class="column-count">{{len .Completed}}</span>
+    </div>
+    <div class="column-cards" data-status="completed">
+      {{range .Completed}}{{template "card" .}}{{end}}
+    </div>
+  </div>
+
+  {{if or (gt (len .Done) 0) (gt (len .Tabled) 0)}}
+  <template x-if="showClosed">
+    <div style="display:contents">
+      <div class="column" data-status="done">
+        <div class="column-header">
+          <span>Done</span>
+          <span class="column-count">{{len .Done}}</span>
+        </div>
+        <div class="column-cards" data-status="done">
+          {{range .Done}}{{template "card" .}}{{end}}
+        </div>
+      </div>
+      <div class="column" data-status="tabled">
+        <div class="column-header">
+          <span>Tabled</span>
+          <span class="column-count">{{len .Tabled}}</span>
+        </div>
+        <div class="column-cards" data-status="tabled">
+          {{range .Tabled}}{{template "card" .}}{{end}}
+        </div>
+      </div>
+    </div>
+  </template>
+  {{end}}
+</div>
+
+{{if or (gt (len .Done) 0) (gt (len .Tabled) 0)}}
+<div class="closed-toggle" @click="showClosed = !showClosed"
+     x-text="showClosed ? '&#x25BC; Hide closed' : '&#x25B6; Show closed (done: {{len .Done}}, tabled: {{len .Tabled}})'">
+</div>
+{{end}}
+{{end}}

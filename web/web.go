@@ -26,6 +26,9 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	// Root page
 	mux.HandleFunc("GET /{$}", ws.handleRoot)
 
+	// Board view
+	mux.HandleFunc("GET /ui/board", ws.handleBoard)
+
 	// Static files
 	staticFS, err := fs.Sub(content, "static")
 	if err != nil {
