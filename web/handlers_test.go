@@ -87,6 +87,62 @@ func TestBoardProjectScoped(t *testing.T) {
 	}
 }
 
+func TestDrawerHandler(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Drawer test card",
+		Body:      "This is the card body",
+		Status:    "todo",
+		ProjectID: 1,
+		Assignees: []string{"user"},
+		Tags:      []string{"bug"},
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	// Add a comment (user agent has ID 1 from seed)
+	_, err = st.CreateComment(card.ID, 1, "Test comment")
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + fmt.Sprintf("/ui/cards/%d/drawer", card.ID))
+	if err != nil {
+		t.Fatalf("GET drawer: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	checks := []string{
+		"Drawer test card",
+		"This is the card body",
+		"Test comment",
+		"bug",
+		"user",
+	}
+	for _, check := range checks {
+		if !strings.Contains(body, check) {
+			t.Errorf("expected drawer to contain %q", check)
+		}
+	}
+
+	// From status "todo", valid transitions are in_flight, blocked, tabled
+	if !strings.Contains(body, "in_flight") {
+		t.Error("expected drawer to show in_flight as valid transition")
+	}
+}
+
 func TestBoardAgentScoped(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 

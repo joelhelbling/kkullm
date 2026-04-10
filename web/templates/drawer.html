@@ -1,0 +1,85 @@
+{{define "drawer"}}
+<div class="drawer-header">
+  <div>
+    <div class="drawer-card-id">#{{.Card.ID}} · {{.Card.Project}}</div>
+    <div class="drawer-title">{{.Card.Title}}</div>
+  </div>
+  <button class="drawer-close" @click="closeDrawer()">✕</button>
+</div>
+
+<div class="drawer-section">
+  <div class="drawer-section-label">Status</div>
+  <div class="drawer-status-pills">
+    <span class="status-pill active active-{{.Card.Status}}">{{.Card.Status}} ✓</span>
+    {{range .Transitions}}
+    <span class="status-pill"
+          hx-patch="/ui/cards/{{$.Card.ID}}/status"
+          hx-vals='{"status":"{{.}}"}'
+          hx-target="#drawer-container"
+          hx-swap="innerHTML">{{.}}</span>
+    {{end}}
+  </div>
+</div>
+
+<div class="drawer-section">
+  <div class="drawer-meta">
+    <div>
+      <div class="drawer-section-label">Assignees</div>
+      <div class="drawer-meta-item">{{if .Card.Assignees}}{{joinStrings .Card.Assignees ", "}}{{else}}unassigned{{end}}</div>
+    </div>
+    <div>
+      <div class="drawer-section-label">Tags</div>
+      <div class="card-tile-tags">
+        {{range .Card.Tags}}
+        <span class="tag" style="background:{{tagBg .}};color:{{tagColor .}};">{{.}}</span>
+        {{end}}
+        {{if not .Card.Tags}}<span class="drawer-meta-item">none</span>{{end}}
+      </div>
+    </div>
+    <div>
+      <div class="drawer-section-label">Created</div>
+      <div class="drawer-meta-item">{{timeAgo .Card.CreatedAt}}</div>
+    </div>
+  </div>
+</div>
+
+{{if .Card.Relations}}
+<div class="drawer-section">
+  <div class="drawer-section-label">Relations</div>
+  {{range .Card.Relations}}
+  <div class="drawer-relation">
+    <span class="drawer-relation-type">{{.RelationType}}</span>
+    <a class="drawer-relation-link"
+       hx-get="/ui/cards/{{.RelatedCardID}}/drawer"
+       hx-target="#drawer-container"
+       hx-swap="innerHTML">#{{.RelatedCardID}}</a>
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+{{if .Card.Body}}
+<div class="drawer-section">
+  <div class="drawer-section-label">Description</div>
+  <div class="drawer-body">{{.Card.Body}}</div>
+</div>
+{{end}}
+
+<div class="drawer-section" style="border-bottom:none;">
+  <div class="drawer-section-label">Comments ({{len .Comments}})</div>
+  <div id="comments-list">
+    {{range .Comments}}
+    <div class="comment">
+      <div class="comment-header">
+        <span class="comment-agent{{if eq .Agent "user"}} user-agent{{end}}">{{.Agent}}</span>
+        <span class="comment-time">{{timeAgo .CreatedAt}}</span>
+      </div>
+      <div class="comment-body">{{.Body}}</div>
+    </div>
+    {{end}}
+    {{if not .Comments}}
+    <div style="font-size:13px;color:var(--text-secondary);">No comments yet.</div>
+    {{end}}
+  </div>
+</div>
+{{end}}

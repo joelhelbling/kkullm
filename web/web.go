@@ -29,6 +29,9 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	// Board view
 	mux.HandleFunc("GET /ui/board", ws.handleBoard)
 
+	// Card detail drawer
+	mux.HandleFunc("GET /ui/cards/{id}/drawer", ws.handleDrawer)
+
 	// Static files
 	staticFS, err := fs.Sub(content, "static")
 	if err != nil {

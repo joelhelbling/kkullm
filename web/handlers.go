@@ -182,6 +182,46 @@ func (ws *WebServer) handleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type drawerData struct {
+	Card        *model.Card
+	Comments    []model.Comment
+	Transitions []string
+}
+
+func (ws *WebServer) handleDrawer(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid id", 400)
+		return
+	}
+
+	card, err := ws.store.GetCard(id)
+	if err != nil {
+		http.Error(w, err.Error(), 404)
+		return
+	}
+
+	comments, err := ws.store.ListComments(id)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	if comments == nil {
+		comments = []model.Comment{}
+	}
+
+	transitions := model.AllowedTransitions(card.Status)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(w, "drawer", drawerData{
+		Card:        card,
+		Comments:    comments,
+		Transitions: transitions,
+	}); err != nil {
+		log.Printf("render drawer: %v", err)
+	}
+}
+
 func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 	var cards []model.Card
 	var showProject bool
