@@ -288,3 +288,104 @@ func TestBlockersHandler(t *testing.T) {
 		t.Error("expected blockers to contain blocked card")
 	}
 }
+
+func TestFullFlow(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Flow test card",
+		Body:      "Testing the full flow",
+		Status:    "considering",
+		ProjectID: 1,
+		Assignees: []string{"user"},
+		Tags:      []string{"test"},
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// 1. Load root page
+	resp, err := http.Get(ts.URL + "/")
+	if err != nil {
+		t.Fatalf("GET /: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("root: expected 200, got %d", resp.StatusCode)
+	}
+
+	// 2. Fetch board
+	resp, err = http.Get(ts.URL + "/ui/board?project=1")
+	if err != nil {
+		t.Fatalf("GET /ui/board: %v", err)
+	}
+	buf, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(buf), "Flow test card") {
+		t.Error("board should contain the test card")
+	}
+
+	// 3. Open drawer
+	resp, err = http.Get(ts.URL + fmt.Sprintf("/ui/cards/%d/drawer", card.ID))
+	if err != nil {
+		t.Fatalf("GET drawer: %v", err)
+	}
+	buf, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(buf), "Testing the full flow") {
+		t.Error("drawer should contain card body")
+	}
+
+	// 4. Change status: considering -> todo
+	req, _ := http.NewRequest("PATCH",
+		ts.URL+fmt.Sprintf("/ui/cards/%d/status", card.ID),
+		strings.NewReader("status=todo"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("PATCH status: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("status change: expected 200, got %d", resp.StatusCode)
+	}
+
+	// 5. Verify card is now in todo
+	updated, _ := st.GetCard(card.ID)
+	if updated.Status != "todo" {
+		t.Errorf("expected status 'todo', got %q", updated.Status)
+	}
+
+	// 6. Fetch blockers (should be empty of this card)
+	resp, err = http.Get(ts.URL + "/ui/blockers")
+	if err != nil {
+		t.Fatalf("GET blockers: %v", err)
+	}
+	buf, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if strings.Contains(string(buf), "Flow test card") {
+		t.Error("blockers should not contain the test card (it's in todo, not blocked)")
+	}
+
+	// 7. Move to blocked
+	req, _ = http.NewRequest("PATCH",
+		ts.URL+fmt.Sprintf("/ui/cards/%d/status", card.ID),
+		strings.NewReader("status=blocked"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, _ = http.DefaultClient.Do(req)
+	resp.Body.Close()
+
+	// 8. Fetch blockers (should contain the card now)
+	resp, err = http.Get(ts.URL + "/ui/blockers")
+	if err != nil {
+		t.Fatalf("GET blockers: %v", err)
+	}
+	buf, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(buf), "Flow test card") {
+		t.Error("blockers should contain the blocked card")
+	}
+}
