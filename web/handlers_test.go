@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -89,11 +90,17 @@ func TestBoardProjectScoped(t *testing.T) {
 func TestBoardAgentScoped(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
-	_, err := st.CreateCard(store.CardCreateParams{
+	// Look up the seeded user agent to get its actual name and id
+	userAgent, err := st.GetAgent(1)
+	if err != nil {
+		t.Fatalf("get seeded agent: %v", err)
+	}
+
+	_, err = st.CreateCard(store.CardCreateParams{
 		Title:     "Agent card",
 		Status:    "in_flight",
 		ProjectID: 1,
-		Assignees: []string{"user"},
+		Assignees: []string{userAgent.Name},
 	})
 	if err != nil {
 		t.Fatalf("create card: %v", err)
@@ -102,9 +109,9 @@ func TestBoardAgentScoped(t *testing.T) {
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
-	resp, err := http.Get(ts.URL + "/ui/board?agent=1")
+	resp, err := http.Get(ts.URL + fmt.Sprintf("/ui/board?agent=%d", userAgent.ID))
 	if err != nil {
-		t.Fatalf("GET /ui/board?agent=1: %v", err)
+		t.Fatalf("GET /ui/board?agent: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -117,5 +124,9 @@ func TestBoardAgentScoped(t *testing.T) {
 
 	if !strings.Contains(body, "Agent card") {
 		t.Error("expected board to contain agent's card")
+	}
+	// Verify ShowProject=true by checking for project-badge class
+	if !strings.Contains(body, "project-badge") {
+		t.Error("expected agent-scoped board to show project-of-origin badges")
 	}
 }
