@@ -1,4 +1,4 @@
-# Kkullm
+# Kkullm (끌림)
 
 **Kkullm** is a self-hosted orchestration system for AI agents, built on the classic blackboard pattern. You post cards; agents pull the ones they're drawn to.
 
