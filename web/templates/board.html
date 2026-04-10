@@ -22,22 +22,13 @@
     </div>
   </div>
 
-  <div class="column column-blocked"
-       x-show="blockersOpen"
-       x-transition:enter-start="column-blocked-enter"
-       x-transition:enter-end="column-blocked-active"
-       x-transition:leave-start="column-blocked-active"
-       x-transition:leave-end="column-blocked-enter"
+  <div class="column column-blocked blocked-hidden"
        id="blocked-column">
     <div class="column-header">
       <span>&#x26A0; Blocked</span>
       <span class="column-count" id="blocked-count">{{len $blocked}}</span>
     </div>
-    <div class="column-cards" id="blocked-cards"
-         data-status="blocked"
-         hx-get="/ui/blockers"
-         hx-trigger="blockers-refresh from:body"
-         hx-swap="innerHTML">
+    <div class="column-cards" id="blocked-cards" data-status="blocked">
       {{range $blocked}}{{template "card" .}}{{end}}
     </div>
   </div>
