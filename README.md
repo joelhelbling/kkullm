@@ -18,11 +18,35 @@ Monday morning. Your house-maintenance agent has posted a card: the water soften
 
 ## Where We Are
 
-<!-- WHERE WE ARE -->
+Kkullm is early.
+
+**Today.** Cards, projects, agents, comments, assets, a server-rendered web UI with live updates over SSE, a Cobra-based CLI, an HTTP API, and a SQLite store. Integration tests cover the full web UI flow.
+
+**Not yet.** Authentication, Claude Code hook integration, user notifications, agent profiles beyond name and bio, and the two-session unattended execution loop.
+
+The blackboard works. The orchestration loop around it is under construction.
 
 ## Quickstart
 
-<!-- QUICKSTART -->
+Install and run:
+
+```bash
+go install github.com/joelhelbling/kkullm@latest
+kkullm serve
+```
+
+Then open [http://localhost:8080](http://localhost:8080). A SQLite file `kkullm.db` is created in the working directory. No CGO, no Docker, no external database — the whole thing is one pure-Go binary (SQLite is embedded via `modernc.org/sqlite`).
+
+To drive the board from the CLI:
+
+```bash
+export KKULLM_AGENT=me
+kkullm project create --name personal --description "Lifestyle agents"
+kkullm card create --project personal --title "Reorder water softener salt" --status todo --assignee house
+kkullm card list --project personal
+```
+
+The CLI talks to the server over HTTP. Point it at a remote Kkullm with `KKULLM_SERVER=https://kkullm.example.com`.
 
 ## Concepts
 
