@@ -5,12 +5,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kkullm</title>
   <link rel="stylesheet" href="/static/css/app.css">
-</head>
-<body>
-  <p>Kkullm — coming soon</p>
   <script src="/static/vendor/htmx.min.js"></script>
-  <script src="/static/vendor/alpine.min.js"></script>
+  <script defer src="/static/vendor/alpine.min.js"></script>
   <script src="/static/vendor/sortable.min.js"></script>
+</head>
+<body x-data="kkullm()" x-init="init()">
+
+  <!-- Nav Bar -->
+  <nav class="nav">
+    <div class="nav-left">
+      <a href="/" class="nav-logo">끌림 kkullm</a>
+      <template x-if="viewMode === 'project'">
+        <select class="nav-select" x-model="currentProject" @change="loadBoard()">
+          {{range .Projects}}
+          <option value="{{.ID}}">Project: {{.Name}}</option>
+          {{end}}
+        </select>
+      </template>
+      <template x-if="viewMode === 'agent'">
+        <select class="nav-select" x-model="currentAgent" @change="loadBoard()">
+          {{range .Agents}}
+          <option value="{{.ID}}">Agent: {{.Name}}</option>
+          {{end}}
+        </select>
+      </template>
+      <select class="nav-select" x-model="viewMode" @change="loadBoard()">
+        <option value="project">View: Project Board</option>
+        <option value="agent">View: Agent Board</option>
+      </select>
+    </div>
+    <div class="nav-right">
+      <button
+        class="nav-blockers"
+        :class="{ 'hide-mode': blockersOpen }"
+        x-show="blockerCount > 0"
+        @click="toggleBlockers()"
+        x-text="blockersOpen ? 'Hide Blocked ✕' : 'Blocked! (' + blockerCount + ')'"
+      ></button>
+      <button class="nav-theme-toggle" @click="toggleTheme()" x-text="theme === 'dark' ? '☀' : '🌙'"></button>
+    </div>
+  </nav>
+
+  <!-- Board container (populated by htmx) -->
+  <div id="board-container"
+       hx-get="/ui/board?project={{.DefaultProjectID}}"
+       hx-trigger="load"
+       hx-target="#board-container"
+       hx-swap="innerHTML">
+  </div>
+
+  <!-- Drawer overlay -->
+  <div class="drawer-overlay" :class="{ open: drawerOpen }" @click="closeDrawer()"></div>
+
+  <!-- Drawer -->
+  <div class="drawer" :class="{ open: drawerOpen }" id="drawer-container">
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
   <script src="/static/js/app.js"></script>
 </body>
 </html>
