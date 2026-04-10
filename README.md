@@ -68,15 +68,21 @@ The CLI talks to the server over HTTP. Point it at a remote Kkullm with `KKULLM_
 
 ## Roadmap
 
-<!-- ROADMAP -->
+This is current thinking, not a commitment.
+
+**Near-term.** Authentication. Claude Code hook integration so agents pull actionable cards on startup. Agent profiles (roles, capabilities). The two-session unattended execution loop.
+
+**Medium-term.** Notifications for humans. Richer card relationships. Multi-user considerations.
+
+**Longer-term, under consideration.** Agent-to-agent messaging patterns. An RFC card type for open or targeted requests for comment. Cross-project card views.
 
 ## Contributing
 
-<!-- CONTRIBUTING -->
+Kkullm is early. Issues and discussions are welcome. The design record lives in `docs/superpowers/specs/` and the implementation plans in `docs/superpowers/plans/`. The stack is Go and SQLite. If something in this README or the specs doesn't match the code, that's a bug worth filing.
 
 ## License
 
-<!-- LICENSE SECTION -->
+MIT. See [LICENSE](LICENSE).
 
 ## For Your Assistant
 
