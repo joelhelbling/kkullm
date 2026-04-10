@@ -30,6 +30,9 @@ function kkullm() {
             this.drawerCardId = parseInt(idEl.dataset.cardId);
           }
         }
+        if (e.detail.target.id === 'blocked-cards') {
+          this.updateBlockerCount();
+        }
       });
 
       // Read initial project from the board container's hx-get
@@ -110,6 +113,9 @@ function kkullm() {
       if (countEl) {
         countEl.textContent = this.blockerCount;
       }
+      if (this.blockerCount === 0) {
+        this.blockersOpen = false;
+      }
     },
 
     // === SortableJS ===
@@ -117,6 +123,9 @@ function kkullm() {
     initSortable() {
       const columns = document.querySelectorAll('.column-cards[data-status]');
       columns.forEach((column) => {
+        // Blocked column is not draggable — status transitions to/from blocked
+        // happen via the drawer's status selector, not drag-and-drop.
+        if (column.id === 'blocked-cards') return;
         if (column._sortable) column._sortable.destroy();
         column._sortable = new Sortable(column, {
           group: 'cards',

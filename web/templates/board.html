@@ -34,6 +34,7 @@
       <span class="column-count" id="blocked-count">{{len $blocked}}</span>
     </div>
     <div class="column-cards" id="blocked-cards"
+         data-status="blocked"
          hx-get="/ui/blockers"
          hx-trigger="blockers-refresh from:body"
          hx-swap="innerHTML">
