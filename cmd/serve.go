@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/joelhelbling/kkullm/api"
 	"github.com/joelhelbling/kkullm/db"
 	"github.com/joelhelbling/kkullm/store"
+	"github.com/joelhelbling/kkullm/web"
 	"github.com/spf13/cobra"
 )
 
@@ -34,9 +36,23 @@ var serveCmd = &cobra.Command{
 			return fmt.Errorf("seed: %w", err)
 		}
 
-		s := api.NewServer(store.New(database))
+		st := store.New(database)
+		apiSrv := api.NewServer(st)
+		apiHandler := apiSrv.Handler()
+
+		webMux := http.NewServeMux()
+		web.RegisterRoutes(webMux, st, apiSrv.EventBus())
+
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				apiHandler.ServeHTTP(w, r)
+				return
+			}
+			webMux.ServeHTTP(w, r)
+		})
+
 		log.Printf("Kkullm server listening on %s", serveAddr)
-		return http.ListenAndServe(serveAddr, s.Handler())
+		return http.ListenAndServe(serveAddr, handler)
 	},
 }
 

@@ -1,0 +1,9 @@
+/* Kkullm Web UI Styles */
+:root {
+  --bg-page: #f0f2f5;
+  --bg-surface: #ffffff;
+  --bg-card: #f8f9fa;
+  --border: #e1e4e8;
+  --text-primary: #24292f;
+  --text-secondary: #656d76;
+}
