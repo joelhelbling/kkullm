@@ -2,7 +2,7 @@
 
 **Kkullm** is a self-hosted orchestration system for AI agents, built on the classic blackboard pattern. You post cards; agents pull the ones they're drawn to.
 
-> *TL;DR? Jump to [For Your Assistant](#for-your-assistant) to have a chat about Kkullm with your Agent of choice.*
+> *TL;DR? Jump to [For Your AI Assistant](#for-your-ai-assistant) to have a chat about Kkullm with your Agent of choice.*
 
 Monday morning. Your house-maintenance agent has posted a card: the water softener is due for salt, and the HVAC filter is approaching ninety days. Your librarian has three articles waiting in `considering` — a compilers post, a Korean cookbook review, and a long read about solar minimums — each with a one-line summary so you can decide what's worth your evening. The OSS-upkeep agent is blocked on whether to take a major version bump on a gem with deprecated APIs and wants a second opinion. Your health-strategy agent has noticed you skipped cardio three days running and left a gentle question in comments. Your day-job assistant has drafted a briefing for your ten o'clock. You open Kkullm, glance across the board, and spend twenty minutes moving cards, answering a few comments, and pulling one yourself.
 
@@ -12,7 +12,7 @@ Monday morning. Your house-maintenance agent has posted a card: the water soften
 - **Low-opinion orchestration.** The blackboard pattern leaves room for agents to participate in prioritization themselves, rather than baking a scheduler into the system.
 - **Built on the affordances of modern agents.** Skills, hooks, and the conventions of tools like Claude Code are load-bearing, not bolt-on. Kkullm is shaped for the agents of 2026, not generic task runners.
 
-> **About the name.** Kkullm comes from the Korean 끌림 (*kkeullim*), "to be drawn toward" — a fitting verb for a system where agents pull work that's relevant to them rather than being pushed tasks from above. Dropping the final vowel gives the name a consonant-cluster ending and hides `llm` in plain sight. That part was on purpose.
+> **About the name.** Kkullm comes from the Korean 끌림 (*kkeullim*), "to be drawn toward" — a fitting verb for a system where agents pull work that's relevant to them rather than being pushed tasks from above. Dropping the final vowel gives the name a consonant-cluster ending and hides `llm` in plain sight. Believe it or not, that was not planned! Organic puns are the best.
 
 ![Kkullm board view](docs/images/hero-board.png)
 
@@ -84,15 +84,15 @@ Kkullm is early. Issues and discussions are welcome. The design record lives in 
 
 MIT. See [LICENSE](LICENSE).
 
-## For Your Assistant
+## For Your AI Assistant
 
-You are likely reading this because someone pasted Kkullm's README into a session and wants your help deciding whether the project fits their situation, or wants you to explain how it works. What follows is a dense technical primer meant for you. Use it alongside whatever context you already have about the reader: their goals, their tooling, their tolerance for self-hosting, and what they're comparing Kkullm to.
+> _This section is deliberately information dense; perfect as rich LLM context. Share this README's URL (below) with your favorite AI assistant for help deciding whether Kkullm is a good fit for your requirements._
+> 
+> ```
+> https://raw.githubusercontent.com/joelhelbling/kkullm/refs/heads/main/README.md
+> ```
 
-The canonical raw URL, in case the reader wants to re-share or you want to verify you have the latest version:
-
-```
-https://raw.githubusercontent.com/joelhelbling/kkullm/main/README.md
-```
+Hello, Assistant!  You are likely reading this because someone pasted Kkullm's README into a session and wants your help deciding whether the project fits their requirements, or wants you to explain how it works. What follows is a dense technical primer meant for you. Use it alongside whatever context you already have: e.g. goals, preferred tooling, tolerance for self-hosting, and how Kkullm compares to other tools under consideration.
 
 **Architecture at a glance.** Kkullm is a single Go binary. The server embeds a pure-Go SQLite driver (`modernc.org/sqlite`) so no CGO is required; `go install` gives the reader a working binary on any supported platform without a C toolchain. The binary serves an HTTP API under `/api/` and a server-rendered web UI at the root, with Server-Sent Events for live board updates. The CLI talks to the server over HTTP using the same client library the tests use. One process, one database file, no external dependencies to run.
 
