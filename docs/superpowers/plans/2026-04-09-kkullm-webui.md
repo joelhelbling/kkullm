@@ -50,7 +50,7 @@ The web package needs access to the same `EventBus` the API handlers publish to.
 - Modify: `api/server.go`
 - Test: `api/server_test.go`
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Add to `api/server_test.go`:
 
@@ -88,12 +88,12 @@ func TestServerEventBus(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./api/ -run TestServerEventBus -v`
 Expected: FAIL with "s.EventBus undefined"
 
-- [ ] **Step 3: Add the EventBus getter**
+- [x] **Step 3: Add the EventBus getter**
 
 Add to `api/server.go`, after the `NewServer` function:
 
@@ -103,17 +103,17 @@ func (s *Server) EventBus() *EventBus {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./api/ -run TestServerEventBus -v`
 Expected: PASS
 
-- [ ] **Step 5: Run all existing tests to confirm no regressions**
+- [x] **Step 5: Run all existing tests to confirm no regressions**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./...`
 Expected: All tests pass
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add api/server.go api/server_test.go
@@ -136,7 +136,7 @@ Create the `web/` package with `//go:embed`, vendor JS files, and static file se
 - Modify: `cmd/serve.go`
 - Test: `web/web_test.go`
 
-- [ ] **Step 1: Download vendor JS files**
+- [x] **Step 1: Download vendor JS files**
 
 ```bash
 cd /Users/joelhelbling/code/ai/kkullm
@@ -154,7 +154,7 @@ wc -c web/static/vendor/*.js
 
 Expected: Each file should be several KB (htmx ~50KB, Alpine ~45KB, Sortable ~40KB).
 
-- [ ] **Step 2: Create placeholder CSS**
+- [x] **Step 2: Create placeholder CSS**
 
 Create `web/static/css/app.css`:
 
@@ -170,7 +170,7 @@ Create `web/static/css/app.css`:
 }
 ```
 
-- [ ] **Step 3: Create placeholder JS**
+- [x] **Step 3: Create placeholder JS**
 
 Create `web/static/js/app.js`:
 
@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 ```
 
-- [ ] **Step 4: Create web.go with embed and RegisterRoutes**
+- [x] **Step 4: Create web.go with embed and RegisterRoutes**
 
 Create `web/web.go`:
 
@@ -215,7 +215,7 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 }
 ```
 
-- [ ] **Step 5: Create a placeholder template file so embed works**
+- [x] **Step 5: Create a placeholder template file so embed works**
 
 Create `web/templates/layout.html`:
 
@@ -238,7 +238,7 @@ Create `web/templates/layout.html`:
 </html>
 ```
 
-- [ ] **Step 6: Write the test**
+- [x] **Step 6: Write the test**
 
 Create `web/web_test.go`:
 
@@ -317,12 +317,12 @@ func TestStaticVendorJS(t *testing.T) {
 }
 ```
 
-- [ ] **Step 7: Run test to verify it passes**
+- [x] **Step 7: Run test to verify it passes**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -v`
 Expected: PASS
 
-- [ ] **Step 8: Update cmd/serve.go to register web routes**
+- [x] **Step 8: Update cmd/serve.go to register web routes**
 
 Modify `cmd/serve.go` to import the web package and register routes on the same mux:
 
@@ -479,12 +479,12 @@ func init() {
 }
 ```
 
-- [ ] **Step 9: Run all tests**
+- [x] **Step 9: Run all tests**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./...`
 Expected: All tests pass
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add web/ cmd/serve.go
@@ -500,7 +500,7 @@ Write the complete CSS with all styles for the board, cards, columns, drawer, bl
 **Files:**
 - Modify: `web/static/css/app.css`
 
-- [ ] **Step 1: Write the complete CSS**
+- [x] **Step 1: Write the complete CSS**
 
 Replace `web/static/css/app.css` with the full stylesheet. The CSS uses custom properties on `:root` (light mode) and `[data-theme="dark"]` (dark mode).
 
@@ -1130,12 +1130,12 @@ body {
 }
 ```
 
-- [ ] **Step 2: Verify CSS loads correctly**
+- [x] **Step 2: Verify CSS loads correctly**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestStaticFileServing -v`
 Expected: PASS
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add web/static/css/app.css
@@ -1154,7 +1154,7 @@ Create the full page shell template and the `GET /` handler.
 - Modify: `web/web.go`
 - Test: `web/handlers_test.go`
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Create `web/handlers_test.go`:
 
@@ -1208,12 +1208,12 @@ func TestRootHandler(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestRootHandler -v`
 Expected: FAIL (404 — no root handler registered yet)
 
-- [ ] **Step 3: Write the layout template**
+- [x] **Step 3: Write the layout template**
 
 Replace `web/templates/layout.html`:
 
@@ -1289,7 +1289,7 @@ Replace `web/templates/layout.html`:
 </html>
 ```
 
-- [ ] **Step 4: Write the handlers.go**
+- [x] **Step 4: Write the handlers.go**
 
 Create `web/handlers.go`:
 
@@ -1354,7 +1354,7 @@ func (ws *WebServer) handleRoot(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-- [ ] **Step 5: Update web.go to register the root handler and init templates**
+- [x] **Step 5: Update web.go to register the root handler and init templates**
 
 Modify `web/web.go` — add `initTemplates()` call and root route:
 
@@ -1392,17 +1392,17 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 }
 ```
 
-- [ ] **Step 6: Run test to verify it passes**
+- [x] **Step 6: Run test to verify it passes**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestRootHandler -v`
 Expected: PASS
 
-- [ ] **Step 7: Run all tests**
+- [x] **Step 7: Run all tests**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./...`
 Expected: All pass
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add web/templates/layout.html web/handlers.go web/web.go web/handlers_test.go
@@ -1422,7 +1422,7 @@ Implement the board view with kanban columns and card tiles for both project-sco
 - Modify: `web/web.go`
 - Test: `web/handlers_test.go`
 
-- [ ] **Step 1: Write the tests**
+- [x] **Step 1: Write the tests**
 
 Add to `web/handlers_test.go`:
 
@@ -1544,12 +1544,12 @@ func setupTestMux(t *testing.T) *http.ServeMux {
 
 Remove the old `setupTestMux` body and replace with the delegation above.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestBoard -v`
 Expected: FAIL (404 — no /ui/board handler)
 
-- [ ] **Step 3: Create the card tile template**
+- [x] **Step 3: Create the card tile template**
 
 Create `web/templates/card.html`:
 
@@ -1585,7 +1585,7 @@ Create `web/templates/card.html`:
 {{end}}
 ```
 
-- [ ] **Step 4: Create the board template**
+- [x] **Step 4: Create the board template**
 
 Create `web/templates/board.html`:
 
@@ -1691,7 +1691,7 @@ Create `web/templates/board.html`:
 {{end}}
 ```
 
-- [ ] **Step 5: Add template functions and board handler**
+- [x] **Step 5: Add template functions and board handler**
 
 Add to `web/handlers.go`:
 
@@ -1916,7 +1916,7 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-- [ ] **Step 6: Register the board route in web.go**
+- [x] **Step 6: Register the board route in web.go**
 
 Add to the `RegisterRoutes` function, after the root handler:
 
@@ -1925,17 +1925,17 @@ Add to the `RegisterRoutes` function, after the root handler:
 	mux.HandleFunc("GET /ui/board", ws.handleBoard)
 ```
 
-- [ ] **Step 7: Run tests to verify they pass**
+- [x] **Step 7: Run tests to verify they pass**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestBoard -v`
 Expected: PASS
 
-- [ ] **Step 8: Run all tests**
+- [x] **Step 8: Run all tests**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./...`
 Expected: All pass
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add web/templates/board.html web/templates/card.html web/handlers.go web/handlers_test.go web/web.go
@@ -1954,7 +1954,7 @@ Implement the drawer template and handler for card detail view.
 - Modify: `web/web.go`
 - Test: `web/handlers_test.go`
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Add to `web/handlers_test.go`:
 
@@ -2019,12 +2019,12 @@ func TestDrawerHandler(t *testing.T) {
 
 Add `"fmt"` to the test file imports if not present.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestDrawerHandler -v`
 Expected: FAIL (404)
 
-- [ ] **Step 3: Create the drawer template**
+- [x] **Step 3: Create the drawer template**
 
 Create `web/templates/drawer.html`:
 
@@ -2116,7 +2116,7 @@ Create `web/templates/drawer.html`:
 {{end}}
 ```
 
-- [ ] **Step 4: Add the drawer handler**
+- [x] **Step 4: Add the drawer handler**
 
 Add to `web/handlers.go`:
 
@@ -2162,7 +2162,7 @@ func (ws *WebServer) handleDrawer(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-- [ ] **Step 5: Register the route in web.go**
+- [x] **Step 5: Register the route in web.go**
 
 Add to `RegisterRoutes`:
 
@@ -2171,17 +2171,17 @@ Add to `RegisterRoutes`:
 	mux.HandleFunc("GET /ui/cards/{id}/drawer", ws.handleDrawer)
 ```
 
-- [ ] **Step 6: Run test to verify it passes**
+- [x] **Step 6: Run test to verify it passes**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestDrawerHandler -v`
 Expected: PASS
 
-- [ ] **Step 7: Run all tests**
+- [x] **Step 7: Run all tests**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./...`
 Expected: All pass
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add web/templates/drawer.html web/handlers.go web/web.go web/handlers_test.go
@@ -2199,7 +2199,7 @@ Implement the `/ui/cards/{id}/status` PATCH handler for both drag-and-drop and d
 - Modify: `web/web.go`
 - Test: `web/handlers_test.go`
 
-- [ ] **Step 1: Write the tests**
+- [x] **Step 1: Write the tests**
 
 Add to `web/handlers_test.go`:
 
@@ -2271,12 +2271,12 @@ func TestStatusChangeInvalid(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestStatusChange -v`
 Expected: FAIL (405 or 404)
 
-- [ ] **Step 3: Add the status change handler**
+- [x] **Step 3: Add the status change handler**
 
 Add to `web/handlers.go`:
 
@@ -2336,7 +2336,7 @@ func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) 
 }
 ```
 
-- [ ] **Step 4: Register the route in web.go**
+- [x] **Step 4: Register the route in web.go**
 
 Add to `RegisterRoutes`:
 
@@ -2345,17 +2345,17 @@ Add to `RegisterRoutes`:
 	mux.HandleFunc("PATCH /ui/cards/{id}/status", ws.handleStatusChange)
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestStatusChange -v`
 Expected: PASS
 
-- [ ] **Step 6: Run all tests**
+- [x] **Step 6: Run all tests**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./...`
 Expected: All pass
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add web/handlers.go web/web.go web/handlers_test.go
@@ -2374,7 +2374,7 @@ Implement the `/ui/blockers` endpoint that returns blocked column content.
 - Modify: `web/web.go`
 - Test: `web/handlers_test.go`
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Add to `web/handlers_test.go`:
 
@@ -2416,12 +2416,12 @@ func TestBlockersHandler(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestBlockersHandler -v`
 Expected: FAIL (404)
 
-- [ ] **Step 3: Create the blockers template**
+- [x] **Step 3: Create the blockers template**
 
 Create `web/templates/blockers.html`:
 
@@ -2452,7 +2452,7 @@ Create `web/templates/blockers.html`:
 {{end}}
 ```
 
-- [ ] **Step 4: Add the blockers handler**
+- [x] **Step 4: Add the blockers handler**
 
 Add to `web/handlers.go`:
 
@@ -2473,7 +2473,7 @@ func (ws *WebServer) handleBlockers(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-- [ ] **Step 5: Register the route in web.go**
+- [x] **Step 5: Register the route in web.go**
 
 Add to `RegisterRoutes`:
 
@@ -2482,17 +2482,17 @@ Add to `RegisterRoutes`:
 	mux.HandleFunc("GET /ui/blockers", ws.handleBlockers)
 ```
 
-- [ ] **Step 6: Run test to verify it passes**
+- [x] **Step 6: Run test to verify it passes**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestBlockersHandler -v`
 Expected: PASS
 
-- [ ] **Step 7: Run all tests**
+- [x] **Step 7: Run all tests**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./...`
 Expected: All pass
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add web/templates/blockers.html web/handlers.go web/web.go web/handlers_test.go
@@ -2508,7 +2508,7 @@ Write `app.js` with all client-side behavior: Alpine.js component, SortableJS in
 **Files:**
 - Modify: `web/static/js/app.js`
 
-- [ ] **Step 1: Write the complete app.js**
+- [x] **Step 1: Write the complete app.js**
 
 Replace `web/static/js/app.js`:
 
@@ -2847,12 +2847,12 @@ function kkullm() {
 }
 ```
 
-- [ ] **Step 2: Verify JS loads correctly**
+- [x] **Step 2: Verify JS loads correctly**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestStaticVendorJS -v`
 Expected: PASS (confirms static serving still works)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add web/static/js/app.js
@@ -2868,7 +2868,7 @@ Add an integration test that exercises the full flow: load page, fetch board, op
 **Files:**
 - Modify: `web/handlers_test.go`
 
-- [ ] **Step 1: Write the integration test**
+- [x] **Step 1: Write the integration test**
 
 Add to `web/handlers_test.go`:
 
@@ -2980,17 +2980,17 @@ func TestFullFlow(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the integration test**
+- [x] **Step 2: Run the integration test**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./web/ -run TestFullFlow -v`
 Expected: PASS
 
-- [ ] **Step 3: Run all tests**
+- [x] **Step 3: Run all tests**
 
 Run: `cd /Users/joelhelbling/code/ai/kkullm && go test ./...`
 Expected: All pass
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add web/handlers_test.go
@@ -3003,14 +3003,14 @@ git commit -m "test: add integration smoke test for full web UI flow"
 
 Start the server and verify the web UI works in a browser.
 
-- [ ] **Step 1: Build and start the server**
+- [x] **Step 1: Build and start the server**
 
 ```bash
 cd /Users/joelhelbling/code/ai/kkullm
 go build -o kkullm . && ./kkullm serve
 ```
 
-- [ ] **Step 2: Seed test data via CLI**
+- [x] **Step 2: Seed test data via CLI**
 
 In a separate terminal:
 
@@ -3023,7 +3023,7 @@ cd /Users/joelhelbling/code/ai/kkullm
 ./kkullm card create --title "Write API docs" --project "api-backend" --tag "docs" --as "user"
 ```
 
-- [ ] **Step 3: Open browser and verify**
+- [x] **Step 3: Open browser and verify**
 
 Open `http://localhost:8080` and check:
 
@@ -3035,14 +3035,14 @@ Open `http://localhost:8080` and check:
 6. Switching projects updates the board
 7. Switching to agent view shows project-of-origin badges
 
-- [ ] **Step 4: Test drag-and-drop**
+- [x] **Step 4: Test drag-and-drop**
 
 1. Drag a card from "Considering" to "Todo"
 2. Verify it stays in the new column
 3. Try an invalid drag (e.g., Considering → In Flight)
 4. Verify error toast appears and card snaps back
 
-- [ ] **Step 5: Test blockers**
+- [x] **Step 5: Test blockers**
 
 ```bash
 ./kkullm card update 1 --status todo --as "user"
@@ -3051,6 +3051,6 @@ Open `http://localhost:8080` and check:
 
 Verify the "Blocked!" badge appears and clicking it slides the blocked column in.
 
-- [ ] **Step 6: Fix any issues found during manual testing**
+- [x] **Step 6: Fix any issues found during manual testing**
 
 Address any layout, styling, or behavior issues discovered. Commit fixes.

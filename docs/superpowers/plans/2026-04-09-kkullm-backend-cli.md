@@ -67,20 +67,20 @@ kkullm/
 **Files:**
 - Create: `go.mod`, `main.go`, `cmd/root.go`
 
-- [ ] **Step 1: Initialize Go module**
+- [x] **Step 1: Initialize Go module**
 
 ```bash
 cd /Users/joelhelbling/code/ai/kkullm
 go mod init github.com/joelhelbling/kkullm
 ```
 
-- [ ] **Step 2: Install cobra**
+- [x] **Step 2: Install cobra**
 
 ```bash
 go get github.com/spf13/cobra@latest
 ```
 
-- [ ] **Step 3: Create main.go**
+- [x] **Step 3: Create main.go**
 
 ```go
 // main.go
@@ -93,7 +93,7 @@ func main() {
 }
 ```
 
-- [ ] **Step 4: Create cmd/root.go with global flags**
+- [x] **Step 4: Create cmd/root.go with global flags**
 
 ```go
 // cmd/root.go
@@ -147,7 +147,7 @@ func requireAgent() string {
 }
 ```
 
-- [ ] **Step 5: Verify it compiles and runs**
+- [x] **Step 5: Verify it compiles and runs**
 
 ```bash
 go build -o kkullm . && ./kkullm --help
@@ -155,7 +155,7 @@ go build -o kkullm . && ./kkullm --help
 
 Expected: help output showing "Agent orchestration system based on the blackboard pattern" with `--server`, `--as`, `--project` flags.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add main.go go.mod go.sum cmd/root.go
@@ -169,13 +169,13 @@ git commit -m "feat: scaffold Go project with cobra root command and global flag
 **Files:**
 - Create: `db/db.go`, `db/db_test.go`, `db/migrations/001_initial.sql`
 
-- [ ] **Step 1: Install pure Go SQLite driver**
+- [x] **Step 1: Install pure Go SQLite driver**
 
 ```bash
 go get modernc.org/sqlite@latest
 ```
 
-- [ ] **Step 2: Write the schema migration file**
+- [x] **Step 2: Write the schema migration file**
 
 ```sql
 -- db/migrations/001_initial.sql
@@ -262,7 +262,7 @@ CREATE INDEX IF NOT EXISTS idx_agents_project ON agents(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_assets_project ON project_assets(project_id);
 ```
 
-- [ ] **Step 3: Write db.go with Open, Migrate, Seed**
+- [x] **Step 3: Write db.go with Open, Migrate, Seed**
 
 ```go
 // db/db.go
@@ -335,7 +335,7 @@ func Seed(db *sql.DB) error {
 }
 ```
 
-- [ ] **Step 4: Write the failing test for database setup**
+- [x] **Step 4: Write the failing test for database setup**
 
 ```go
 // db/db_test.go
@@ -410,7 +410,7 @@ func TestSeed(t *testing.T) {
 }
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 ```bash
 go test ./db/ -v
@@ -418,7 +418,7 @@ go test ./db/ -v
 
 Expected: PASS for both tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add db/
@@ -432,7 +432,7 @@ git commit -m "feat: add SQLite database layer with schema, migrations, and seed
 **Files:**
 - Create: `model/model.go`
 
-- [ ] **Step 1: Define all model structs**
+- [x] **Step 1: Define all model structs**
 
 ```go
 // model/model.go
@@ -543,7 +543,7 @@ func AllowedTransitions(from string) []string {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 ```bash
 go build ./model/
@@ -551,7 +551,7 @@ go build ./model/
 
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add model/
@@ -565,7 +565,7 @@ git commit -m "feat: define model types with card status transition rules"
 **Files:**
 - Create: `store/project.go`, `store/project_test.go`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```go
 // store/project_test.go
@@ -662,7 +662,7 @@ func TestGetProjectByID(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 go test ./store/ -v
@@ -670,7 +670,7 @@ go test ./store/ -v
 
 Expected: FAIL — `Store` type not defined.
 
-- [ ] **Step 3: Implement the project store**
+- [x] **Step 3: Implement the project store**
 
 ```go
 // store/project.go
@@ -751,7 +751,7 @@ func (s *Store) ListProjects() ([]model.Project, error) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 go test ./store/ -v
@@ -759,7 +759,7 @@ go test ./store/ -v
 
 Expected: PASS for all three tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add store/project.go store/project_test.go
@@ -773,7 +773,7 @@ git commit -m "feat: add project store with CRUD operations"
 **Files:**
 - Create: `store/agent.go`, `store/agent_test.go`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```go
 // store/agent_test.go
@@ -851,7 +851,7 @@ func TestGetAgentByName(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 go test ./store/ -v -run TestAgent
@@ -859,7 +859,7 @@ go test ./store/ -v -run TestAgent
 
 Expected: FAIL — methods not defined.
 
-- [ ] **Step 3: Implement the agent store**
+- [x] **Step 3: Implement the agent store**
 
 ```go
 // store/agent.go
@@ -944,7 +944,7 @@ func (s *Store) ListAgents(projectName string) ([]model.Agent, error) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 go test ./store/ -v
@@ -952,7 +952,7 @@ go test ./store/ -v
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add store/agent.go store/agent_test.go
@@ -966,7 +966,7 @@ git commit -m "feat: add agent store with CRUD and project-filtered listing"
 **Files:**
 - Create: `store/card.go`, `store/card_test.go`
 
-- [ ] **Step 1: Write failing tests for card creation and listing**
+- [x] **Step 1: Write failing tests for card creation and listing**
 
 ```go
 // store/card_test.go
@@ -1156,7 +1156,7 @@ func TestListCardsFiltered(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 go test ./store/ -v -run TestCard
@@ -1164,7 +1164,7 @@ go test ./store/ -v -run TestCard
 
 Expected: FAIL — `CreateCard`, `CardListParams` not defined.
 
-- [ ] **Step 3: Implement card store**
+- [x] **Step 3: Implement card store**
 
 ```go
 // store/card.go
@@ -1420,7 +1420,7 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 go test ./store/ -v
@@ -1428,7 +1428,7 @@ go test ./store/ -v
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add store/card.go store/card_test.go
@@ -1443,7 +1443,7 @@ git commit -m "feat: add card store with CRUD, assignees, tags, relations, and f
 - Modify: `store/card.go`
 - Modify: `store/card_test.go`
 
-- [ ] **Step 1: Write failing tests for status transitions and update**
+- [x] **Step 1: Write failing tests for status transitions and update**
 
 Add to `store/card_test.go`:
 
@@ -1515,7 +1515,7 @@ func TestUpdateCardAddRelations(t *testing.T) {
 func strPtr(s string) *string { return &s }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 go test ./store/ -v -run TestUpdate
@@ -1523,7 +1523,7 @@ go test ./store/ -v -run TestUpdate
 
 Expected: FAIL — `UpdateCard`, `CardUpdateParams` not defined.
 
-- [ ] **Step 3: Implement UpdateCard**
+- [x] **Step 3: Implement UpdateCard**
 
 Add to `store/card.go`:
 
@@ -1632,7 +1632,7 @@ func (s *Store) UpdateCard(id int, p CardUpdateParams) (*model.Card, error) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 go test ./store/ -v
@@ -1640,7 +1640,7 @@ go test ./store/ -v
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add store/card.go store/card_test.go
@@ -1654,7 +1654,7 @@ git commit -m "feat: add card update with status transition validation"
 **Files:**
 - Create: `store/comment.go`, `store/comment_test.go`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```go
 // store/comment_test.go
@@ -1705,7 +1705,7 @@ func TestCreateAndListComments(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 go test ./store/ -v -run TestComment
@@ -1713,7 +1713,7 @@ go test ./store/ -v -run TestComment
 
 Expected: FAIL — methods not defined.
 
-- [ ] **Step 3: Implement comment store**
+- [x] **Step 3: Implement comment store**
 
 ```go
 // store/comment.go
@@ -1775,7 +1775,7 @@ func (s *Store) ListComments(cardID int) ([]model.Comment, error) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 go test ./store/ -v
@@ -1783,7 +1783,7 @@ go test ./store/ -v
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add store/comment.go store/comment_test.go
@@ -1797,7 +1797,7 @@ git commit -m "feat: add comment store with create and list by card"
 **Files:**
 - Create: `store/asset.go`, `store/asset_test.go`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```go
 // store/asset_test.go
@@ -1888,7 +1888,7 @@ func TestGetAsset(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 go test ./store/ -v -run TestAsset
@@ -1896,7 +1896,7 @@ go test ./store/ -v -run TestAsset
 
 Expected: FAIL — methods not defined.
 
-- [ ] **Step 3: Implement asset store**
+- [x] **Step 3: Implement asset store**
 
 ```go
 // store/asset.go
@@ -2001,7 +2001,7 @@ func nilIfEmpty(s string) *string {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 go test ./store/ -v
@@ -2009,7 +2009,7 @@ go test ./store/ -v
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add store/asset.go store/asset_test.go
@@ -2023,7 +2023,7 @@ git commit -m "feat: add asset store with CRUD and glob pattern search"
 **Files:**
 - Create: `api/server.go`, `api/projects.go`, `api/agents.go`, `api/server_test.go`
 
-- [ ] **Step 1: Write failing integration test**
+- [x] **Step 1: Write failing integration test**
 
 ```go
 // api/server_test.go
@@ -2147,7 +2147,7 @@ func TestCreateAndListAgents(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 go test ./api/ -v
@@ -2155,7 +2155,7 @@ go test ./api/ -v
 
 Expected: FAIL — `NewServer` not defined.
 
-- [ ] **Step 3: Implement server and project handlers**
+- [x] **Step 3: Implement server and project handlers**
 
 ```go
 // api/server.go
@@ -2325,7 +2325,7 @@ func (s *Server) getAgent(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 ```bash
 go test ./api/ -v
@@ -2333,7 +2333,7 @@ go test ./api/ -v
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/
@@ -2349,7 +2349,7 @@ git commit -m "feat: add REST API server with project and agent handlers"
 - Modify: `api/server.go` (add routes)
 - Modify: `api/server_test.go` (add tests)
 
-- [ ] **Step 1: Write failing tests for card and comment endpoints**
+- [x] **Step 1: Write failing tests for card and comment endpoints**
 
 Add to `api/server_test.go`:
 
@@ -2461,7 +2461,7 @@ func TestCardComments(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 ```bash
 go test ./api/ -v -run TestCard
@@ -2469,7 +2469,7 @@ go test ./api/ -v -run TestCard
 
 Expected: FAIL — card routes not registered.
 
-- [ ] **Step 3: Implement card handlers**
+- [x] **Step 3: Implement card handlers**
 
 ```go
 // api/cards.go
@@ -2671,7 +2671,7 @@ func (s *Server) createComment(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-- [ ] **Step 4: Register card, comment, and asset routes in server.go**
+- [x] **Step 4: Register card, comment, and asset routes in server.go**
 
 Update `api/server.go` `Handler()` method to add the remaining routes:
 
@@ -2709,7 +2709,7 @@ func (s *Server) Handler() http.Handler {
 }
 ```
 
-- [ ] **Step 5: Implement asset handlers**
+- [x] **Step 5: Implement asset handlers**
 
 ```go
 // api/assets.go
@@ -2782,7 +2782,7 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-- [ ] **Step 6: Add DeleteCard to the store**
+- [x] **Step 6: Add DeleteCard to the store**
 
 Add to `store/card.go`:
 
@@ -2796,7 +2796,7 @@ func (s *Store) DeleteCard(id int) error {
 }
 ```
 
-- [ ] **Step 7: Run all tests**
+- [x] **Step 7: Run all tests**
 
 ```bash
 go test ./... -v
@@ -2804,7 +2804,7 @@ go test ./... -v
 
 Expected: all tests PASS across all packages.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add api/ store/card.go
@@ -2821,7 +2821,7 @@ git commit -m "feat: add REST API handlers for cards, comments, and assets"
 - Modify: `api/cards.go`, `api/comments.go` (emit events on changes)
 - Modify: `api/server_test.go`
 
-- [ ] **Step 1: Write failing test for SSE**
+- [x] **Step 1: Write failing test for SSE**
 
 Add to `api/server_test.go`:
 
@@ -2844,7 +2844,7 @@ func TestSSEStream(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 ```bash
 go test ./api/ -v -run TestSSE
@@ -2852,7 +2852,7 @@ go test ./api/ -v -run TestSSE
 
 Expected: FAIL — route not registered.
 
-- [ ] **Step 3: Implement SSE event bus and handler**
+- [x] **Step 3: Implement SSE event bus and handler**
 
 ```go
 // api/sse.go
@@ -2937,7 +2937,7 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-- [ ] **Step 4: Update Server struct and Handler to include EventBus**
+- [x] **Step 4: Update Server struct and Handler to include EventBus**
 
 Replace `api/server.go` with:
 
@@ -3010,7 +3010,7 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 }
 ```
 
-- [ ] **Step 5: Add event publishing to card and comment handlers**
+- [x] **Step 5: Add event publishing to card and comment handlers**
 
 In `api/cards.go`, add after successful create/update/delete:
 
@@ -3032,7 +3032,7 @@ In `api/comments.go`, add after successful create:
 s.events.Publish(Event{Type: "comment_created", Data: comment})
 ```
 
-- [ ] **Step 6: Run all tests**
+- [x] **Step 6: Run all tests**
 
 ```bash
 go test ./... -v
@@ -3040,7 +3040,7 @@ go test ./... -v
 
 Expected: all tests PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add api/
@@ -3054,7 +3054,7 @@ git commit -m "feat: add SSE event stream with pub/sub for real-time updates"
 **Files:**
 - Create: `client/client.go`
 
-- [ ] **Step 1: Implement the HTTP client**
+- [x] **Step 1: Implement the HTTP client**
 
 ```go
 // client/client.go
@@ -3280,7 +3280,7 @@ func (c *Client) GetAsset(id int) (*model.ProjectAsset, error) {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 ```bash
 go build ./client/
@@ -3288,7 +3288,7 @@ go build ./client/
 
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add client/
@@ -3302,7 +3302,7 @@ git commit -m "feat: add HTTP client library for CLI commands"
 **Files:**
 - Create: `cmd/serve.go`, `cmd/project.go`, `cmd/agent.go`
 
-- [ ] **Step 1: Implement serve command**
+- [x] **Step 1: Implement serve command**
 
 ```go
 // cmd/serve.go
@@ -3356,7 +3356,7 @@ func init() {
 }
 ```
 
-- [ ] **Step 2: Implement project commands**
+- [x] **Step 2: Implement project commands**
 
 ```go
 // cmd/project.go
@@ -3421,7 +3421,7 @@ func init() {
 }
 ```
 
-- [ ] **Step 3: Implement agent commands**
+- [x] **Step 3: Implement agent commands**
 
 ```go
 // cmd/agent.go
@@ -3521,7 +3521,7 @@ func init() {
 }
 ```
 
-- [ ] **Step 4: Verify it compiles**
+- [x] **Step 4: Verify it compiles**
 
 ```bash
 go build -o kkullm . && ./kkullm project --help && ./kkullm agent --help && ./kkullm serve --help
@@ -3529,7 +3529,7 @@ go build -o kkullm . && ./kkullm project --help && ./kkullm agent --help && ./kk
 
 Expected: help output for each subcommand.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add cmd/serve.go cmd/project.go cmd/agent.go
@@ -3543,7 +3543,7 @@ git commit -m "feat: add CLI commands for serve, project, and agent"
 **Files:**
 - Create: `cmd/card.go`, `cmd/comment.go`, `cmd/asset.go`
 
-- [ ] **Step 1: Implement card commands**
+- [x] **Step 1: Implement card commands**
 
 ```go
 // cmd/card.go
@@ -3801,7 +3801,7 @@ func init() {
 }
 ```
 
-- [ ] **Step 2: Implement comment commands**
+- [x] **Step 2: Implement comment commands**
 
 ```go
 // cmd/comment.go
@@ -3873,7 +3873,7 @@ func init() {
 }
 ```
 
-- [ ] **Step 3: Implement asset commands**
+- [x] **Step 3: Implement asset commands**
 
 ```go
 // cmd/asset.go
@@ -3978,7 +3978,7 @@ func init() {
 }
 ```
 
-- [ ] **Step 4: Build and verify all commands**
+- [x] **Step 4: Build and verify all commands**
 
 ```bash
 go build -o kkullm . && ./kkullm --help
@@ -3986,7 +3986,7 @@ go build -o kkullm . && ./kkullm --help
 
 Expected: help output showing all subcommands: `serve`, `card`, `comment`, `project`, `agent`, `asset`.
 
-- [ ] **Step 5: Run all tests**
+- [x] **Step 5: Run all tests**
 
 ```bash
 go test ./... -v
@@ -3994,7 +3994,7 @@ go test ./... -v
 
 Expected: all tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add cmd/card.go cmd/comment.go cmd/asset.go
@@ -4010,7 +4010,7 @@ git commit -m "feat: add CLI commands for card, comment, and asset management"
 
 This test starts the server, runs CLI-equivalent HTTP operations, and verifies the full workflow.
 
-- [ ] **Step 1: Write the e2e test**
+- [x] **Step 1: Write the e2e test**
 
 ```go
 // test/e2e_test.go
@@ -4151,7 +4151,7 @@ func TestFullWorkflow(t *testing.T) {
 }
 ```
 
-- [ ] **Step 2: Run the e2e test**
+- [x] **Step 2: Run the e2e test**
 
 ```bash
 go test ./test/ -v
@@ -4159,7 +4159,7 @@ go test ./test/ -v
 
 Expected: PASS — full workflow from project creation through card lifecycle to asset discovery.
 
-- [ ] **Step 3: Run all tests one final time**
+- [x] **Step 3: Run all tests one final time**
 
 ```bash
 go test ./... -v
@@ -4167,14 +4167,14 @@ go test ./... -v
 
 Expected: all tests PASS across all packages.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add test/
 git commit -m "feat: add end-to-end smoke test covering full agent workflow"
 ```
 
-- [ ] **Step 5: Final build verification**
+- [x] **Step 5: Final build verification**
 
 ```bash
 go build -o kkullm . && ls -lh kkullm
