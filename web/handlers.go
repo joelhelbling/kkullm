@@ -428,6 +428,47 @@ func (ws *WebServer) handleArchived(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (ws *WebServer) handleAddComment(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid id", 400)
+		return
+	}
+
+	card, err := ws.store.GetCard(id)
+	if err != nil {
+		http.Error(w, err.Error(), 404)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form data", 400)
+		return
+	}
+
+	body := strings.TrimSpace(r.FormValue("body"))
+	if body == "" {
+		ws.renderDrawer(w, card, "Comment can't be empty.")
+		return
+	}
+
+	agent, err := ws.store.GetAgentByName("user")
+	if err != nil {
+		http.Error(w, "user agent missing — check seed data", 500)
+		return
+	}
+
+	comment, err := ws.store.CreateComment(card.ID, agent.ID, body)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	ws.events.Publish(api.Event{Type: "comment_created", Data: comment})
+
+	ws.renderDrawer(w, card, "")
+}
+
 func (ws *WebServer) handleBlockers(w http.ResponseWriter, r *http.Request) {
 	cards, err := ws.store.ListCards(store.CardListParams{
 		Status: "blocked",
