@@ -694,3 +694,49 @@ body {
 .hidden {
   display: none !important;
 }
+
+/* ===== Comment Composer ===== */
+.comment-form {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comment-form textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 4px;
+  background: var(--bg-input, #fff);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.comment-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.comment-form-actions button {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 4px;
+  background: var(--bg-button, #f6f6f6);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.comment-form-actions button:hover {
+  background: var(--bg-button-hover, #ececec);
+}
+
+.form-error {
+  font-size: 12px;
+  color: #c0392b;
+}
