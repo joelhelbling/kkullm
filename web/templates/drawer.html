@@ -86,5 +86,19 @@
     <div style="font-size:13px;color:var(--text-secondary);">No comments yet.</div>
     {{end}}
   </div>
+
+  <form class="comment-form"
+        hx-post="/ui/cards/{{.Card.ID}}/comments"
+        hx-target="#drawer-container"
+        hx-swap="innerHTML">
+    {{if .CommentError}}
+    <div class="form-error">{{.CommentError}}</div>
+    {{end}}
+    <textarea name="body" rows="3" required
+              placeholder="Add a comment as user…"></textarea>
+    <div class="comment-form-actions">
+      <button type="submit">Comment</button>
+    </div>
+  </form>
 </div>
 {{end}}
