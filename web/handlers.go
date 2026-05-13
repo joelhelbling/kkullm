@@ -190,9 +190,10 @@ type statusPill struct {
 }
 
 type drawerData struct {
-	Card        *model.Card
-	Comments    []model.Comment
-	StatusPills []statusPill
+	Card         *model.Card
+	Comments     []model.Comment
+	StatusPills  []statusPill
+	CommentError string
 }
 
 func buildStatusPills(current string) []statusPill {
