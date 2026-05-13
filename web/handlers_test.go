@@ -362,6 +362,66 @@ func TestArchivedHandler(t *testing.T) {
 
 func strPtr(s string) *string { return &s }
 
+func TestAddCommentHappyPath(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Has comments",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	form := strings.NewReader("body=hello+from+test")
+	req, err := http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%s/ui/cards/%d/comments", ts.URL, card.ID), form)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	body := string(bodyBytes)
+
+	if !strings.Contains(body, "hello from test") {
+		t.Errorf("expected re-rendered drawer to contain the new comment body, got: %s", body)
+	}
+	if !strings.Contains(body, "Comments (1)") {
+		t.Errorf("expected comment count to update to 1, got: %s", body)
+	}
+
+	comments, err := st.ListComments(card.ID)
+	if err != nil {
+		t.Fatalf("ListComments: %v", err)
+	}
+	if len(comments) != 1 {
+		t.Fatalf("expected 1 comment in store, got %d", len(comments))
+	}
+	if comments[0].Body != "hello from test" {
+		t.Errorf("expected stored body 'hello from test', got %q", comments[0].Body)
+	}
+	if comments[0].Agent != "user" {
+		t.Errorf("expected web comment author 'user', got %q", comments[0].Agent)
+	}
+}
+
 func TestFullFlow(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
