@@ -74,19 +74,25 @@
 
 <div class="drawer-comments">
   <div class="drawer-section-label drawer-comments-label">Comments ({{len .Comments}})</div>
-  <div id="comments-list">
-    {{range .Comments}}
-    <div class="comment">
-      <div class="comment-header">
-        <span class="comment-agent{{if eq .Agent "user"}} user-agent{{end}}">{{.Agent}}</span>
-        <span class="comment-time">{{timeAgo .CreatedAt}}</span>
+  <div class="drawer-comments-scroll-wrap">
+    <div class="drawer-comments-scroll">
+      <div id="comments-list">
+        {{range .Comments}}
+        <div class="comment">
+          <div class="comment-header">
+            <span class="comment-agent{{if eq .Agent "user"}} user-agent{{end}}">{{.Agent}}</span>
+            <span class="comment-time">{{timeAgo .CreatedAt}}</span>
+          </div>
+          <div class="comment-body">{{.Body}}</div>
+        </div>
+        {{end}}
+        {{if not .Comments}}
+        <div style="font-size:13px;color:var(--text-secondary);">No comments yet.</div>
+        {{end}}
       </div>
-      <div class="comment-body">{{.Body}}</div>
     </div>
-    {{end}}
-    {{if not .Comments}}
-    <div style="font-size:13px;color:var(--text-secondary);">No comments yet.</div>
-    {{end}}
+    <div class="scroll-shadow scroll-shadow-top"></div>
+    <div class="scroll-shadow scroll-shadow-bottom"></div>
   </div>
 </div>
 
@@ -107,20 +113,21 @@
 </div>
 <script>
 (function() {
-  var el = document.querySelector('#drawer-container .drawer-comments');
-  if (!el) return;
+  var scroll = document.querySelector('#drawer-container .drawer-comments-scroll');
+  var wrap = document.querySelector('#drawer-container .drawer-comments-scroll-wrap');
+  if (!scroll || !wrap) return;
 
   function update() {
-    var atTop = el.scrollTop <= 0;
-    var atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
-    el.classList.toggle('has-shadow-top', !atTop);
-    el.classList.toggle('has-shadow-bottom', !atBottom);
+    var atTop = scroll.scrollTop <= 0;
+    var atBottom = scroll.scrollTop + scroll.clientHeight >= scroll.scrollHeight - 1;
+    wrap.classList.toggle('has-shadow-top', !atTop);
+    wrap.classList.toggle('has-shadow-bottom', !atBottom);
   }
 
-  el.scrollTop = el.scrollHeight;
+  scroll.scrollTop = scroll.scrollHeight;
   update();
 
-  el.addEventListener('scroll', update, { passive: true });
+  scroll.addEventListener('scroll', update, { passive: true });
 })();
 </script>
 {{end}}
