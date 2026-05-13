@@ -11,12 +11,17 @@
   <div class="drawer-section-label">Status</div>
   <div class="drawer-status-pills">
     <span class="status-pill active active-{{.Card.Status}}">{{.Card.Status}} ✓</span>
-    {{range .Transitions}}
+    {{range .StatusPills}}
+    {{if .Reachable}}
     <span class="status-pill"
           hx-patch="/ui/cards/{{$.Card.ID}}/status"
-          hx-vals='{"status":"{{.}}"}'
+          hx-vals='{"status":"{{.Status}}"}'
           hx-target="#drawer-container"
-          hx-swap="innerHTML">{{.}}</span>
+          hx-swap="innerHTML">{{.Status}}</span>
+    {{else}}
+    <span class="status-pill status-pill-disabled"
+          title="Not allowed from {{$.Card.Status}}">{{.Status}}</span>
+    {{end}}
     {{end}}
   </div>
 </div>

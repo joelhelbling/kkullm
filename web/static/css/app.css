@@ -380,6 +380,16 @@ body {
   border-color: var(--text-secondary);
 }
 
+.status-pill.status-pill-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.status-pill.status-pill-disabled:hover {
+  background: var(--bg-card);
+}
+
 /* ===== Drawer ===== */
 .drawer-overlay {
   position: fixed;

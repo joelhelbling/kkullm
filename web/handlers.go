@@ -180,10 +180,29 @@ func (ws *WebServer) handleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type statusPill struct {
+	Status    string
+	Reachable bool
+}
+
 type drawerData struct {
 	Card        *model.Card
 	Comments    []model.Comment
-	Transitions []string
+	StatusPills []statusPill
+}
+
+func buildStatusPills(current string) []statusPill {
+	pills := make([]statusPill, 0, len(model.AllStatuses)-1)
+	for _, s := range model.AllStatuses {
+		if s == current {
+			continue
+		}
+		pills = append(pills, statusPill{
+			Status:    s,
+			Reachable: model.CanTransition(current, s),
+		})
+	}
+	return pills
 }
 
 func (ws *WebServer) handleDrawer(w http.ResponseWriter, r *http.Request) {
@@ -208,13 +227,11 @@ func (ws *WebServer) handleDrawer(w http.ResponseWriter, r *http.Request) {
 		comments = []model.Comment{}
 	}
 
-	transitions := model.AllowedTransitions(card.Status)
-
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "drawer", drawerData{
 		Card:        card,
 		Comments:    comments,
-		Transitions: transitions,
+		StatusPills: buildStatusPills(card.Status),
 	}); err != nil {
 		log.Printf("render drawer: %v", err)
 	}
@@ -263,12 +280,11 @@ func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) 
 		if comments == nil {
 			comments = []model.Comment{}
 		}
-		transitions := model.AllowedTransitions(card.Status)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err := tmpl.ExecuteTemplate(w, "drawer", drawerData{
 			Card:        card,
 			Comments:    comments,
-			Transitions: transitions,
+			StatusPills: buildStatusPills(card.Status),
 		}); err != nil {
 			log.Printf("render drawer: %v", err)
 		}

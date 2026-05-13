@@ -69,6 +69,17 @@ var ValidStatuses = map[string]bool{
 	"blocked":     true,
 }
 
+// AllStatuses lists every valid card status in canonical display order
+// (left-to-right column order on the board).
+var AllStatuses = []string{
+	"considering",
+	"todo",
+	"blocked",
+	"in_flight",
+	"completed",
+	"tabled",
+}
+
 var ValidTransitions = map[string]map[string]bool{
 	"considering": {"todo": true, "tabled": true},
 	"todo":        {"in_flight": true, "blocked": true, "tabled": true},

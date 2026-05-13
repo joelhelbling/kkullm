@@ -137,9 +137,19 @@ func TestDrawerHandler(t *testing.T) {
 		}
 	}
 
-	// From status "todo", valid transitions are in_flight, blocked, tabled
-	if !strings.Contains(body, "in_flight") {
-		t.Error("expected drawer to show in_flight as valid transition")
+	// From status "todo", every status except "todo" itself should appear as a pill.
+	// in_flight, blocked, tabled are reachable; considering and completed are disabled.
+	for _, s := range []string{"in_flight", "blocked", "tabled", "considering", "completed"} {
+		if !strings.Contains(body, ">"+s+"<") {
+			t.Errorf("expected drawer to show %q as a status pill", s)
+		}
+	}
+	// Unreachable statuses must carry the disabled class and tooltip.
+	if got := strings.Count(body, "status-pill-disabled"); got != 2 {
+		t.Errorf("expected exactly 2 disabled pills (considering, completed), got %d", got)
+	}
+	if !strings.Contains(body, "Not allowed from todo") {
+		t.Error("expected disabled pills to carry an explanatory title")
 	}
 }
 
