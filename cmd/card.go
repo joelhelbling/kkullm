@@ -23,14 +23,29 @@ var (
 	cardListTag      string
 	cardListFormat   string
 	cardListJSON     bool
+	cardListArchived bool
 )
+
+// cliArchiveLimit caps completed/tabled cards in CLI output.
+// Active view shows the most-recent N; --archived shows the overflow.
+const cliArchiveLimit = 3
 
 var cardListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List cards",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c := client.New(serverURL)
-		cards, err := c.ListCards(projectName, cardListAssignee, cardListStatus, cardListTag)
+		opts := client.CardListOptions{
+			Project:      projectName,
+			Assignee:     cardListAssignee,
+			Status:       cardListStatus,
+			Tag:          cardListTag,
+			ArchiveLimit: cliArchiveLimit,
+		}
+		if cardListArchived {
+			opts.ArchiveView = "archived"
+		}
+		cards, err := c.ListCards(opts)
 		if err != nil {
 			return err
 		}
@@ -255,6 +270,7 @@ func init() {
 	cardListCmd.Flags().StringVar(&cardListTag, "tag", "", "Filter by tag")
 	cardListCmd.Flags().StringVar(&cardListFormat, "format", "brief", "Output format: brief or full")
 	cardListCmd.Flags().BoolVar(&cardListJSON, "json", false, "Output as JSON")
+	cardListCmd.Flags().BoolVar(&cardListArchived, "archived", false, "Show archived completed/tabled cards instead of the active set")
 
 	// card create flags
 	cardCreateCmd.Flags().StringVar(&cardCreateTitle, "title", "", "Card title (required)")

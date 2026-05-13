@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -299,6 +300,87 @@ func TestListCardsPrioritizedOrder(t *testing.T) {
 		if cards[i].Status != want {
 			t.Errorf("position %d: status = %q, want %q", i, cards[i].Status, want)
 		}
+	}
+}
+
+func TestListCardsArchiveLimit(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+
+	walk := func(title, target string) {
+		t.Helper()
+		c, err := s.CreateCard(CardCreateParams{Title: title, ProjectID: proj.ID})
+		if err != nil {
+			t.Fatalf("CreateCard %q: %v", title, err)
+		}
+		path := map[string][]string{
+			"considering": nil,
+			"todo":        {"todo"},
+			"in_flight":   {"todo", "in_flight"},
+			"completed":   {"todo", "in_flight", "completed"},
+			"tabled":      {"tabled"},
+		}[target]
+		for _, step := range path {
+			if _, err := s.UpdateCard(c.ID, CardUpdateParams{Status: strPtr(step)}); err != nil {
+				t.Fatalf("transition %q -> %q on %q: %v", c.Status, step, title, err)
+			}
+		}
+	}
+
+	// One in_flight, one considering, plus 4 completed and 4 tabled.
+	walk("active-flight", "in_flight")
+	walk("active-considering", "considering")
+	for i := 1; i <= 4; i++ {
+		walk(fmt.Sprintf("completed-%d", i), "completed")
+		walk(fmt.Sprintf("tabled-%d", i), "tabled")
+	}
+
+	// Active view with cap=2: should return in_flight + considering + top 2
+	// completed + top 2 tabled = 6 cards. None marked archived.
+	cards, err := s.ListCards(CardListParams{Project: proj.Name, ArchiveLimit: 2})
+	if err != nil {
+		t.Fatalf("ListCards(active): %v", err)
+	}
+	if len(cards) != 6 {
+		t.Errorf("active view: got %d cards, want 6", len(cards))
+	}
+	var completedCount, tabledCount int
+	for _, c := range cards {
+		if c.Status == "completed" {
+			completedCount++
+		}
+		if c.Status == "tabled" {
+			tabledCount++
+		}
+	}
+	if completedCount != 2 {
+		t.Errorf("active view: %d completed, want 2", completedCount)
+	}
+	if tabledCount != 2 {
+		t.Errorf("active view: %d tabled, want 2", tabledCount)
+	}
+
+	// Archived view with cap=2: only the 2 oldest completed + 2 oldest tabled.
+	archived, err := s.ListCards(CardListParams{Project: proj.Name, ArchiveLimit: 2, ArchiveView: "archived"})
+	if err != nil {
+		t.Fatalf("ListCards(archived): %v", err)
+	}
+	if len(archived) != 4 {
+		t.Errorf("archived view: got %d cards, want 4", len(archived))
+	}
+	for _, c := range archived {
+		if c.Status != "completed" && c.Status != "tabled" {
+			t.Errorf("archived view contains non-terminal status %q", c.Status)
+		}
+	}
+
+	// Archived view without ArchiveLimit returns empty (caller didn't ask for a cap).
+	empty, err := s.ListCards(CardListParams{Project: proj.Name, ArchiveView: "archived"})
+	if err != nil {
+		t.Fatalf("ListCards(archived,nolimit): %v", err)
+	}
+	if len(empty) != 0 {
+		t.Errorf("archived view without limit: got %d, want 0", len(empty))
 	}
 }
 

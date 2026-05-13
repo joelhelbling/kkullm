@@ -11,10 +11,19 @@ import (
 
 func (s *Server) listCards(w http.ResponseWriter, r *http.Request) {
 	params := store.CardListParams{
-		Project:  r.URL.Query().Get("project"),
-		Assignee: r.URL.Query().Get("assignee"),
-		Status:   r.URL.Query().Get("status"),
-		Tag:      r.URL.Query().Get("tag"),
+		Project:     r.URL.Query().Get("project"),
+		Assignee:    r.URL.Query().Get("assignee"),
+		Status:      r.URL.Query().Get("status"),
+		Tag:         r.URL.Query().Get("tag"),
+		ArchiveView: r.URL.Query().Get("archive_view"),
+	}
+	if v := r.URL.Query().Get("archive_limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			writeError(w, 400, "archive_limit must be a non-negative integer")
+			return
+		}
+		params.ArchiveLimit = n
 	}
 
 	cards, err := s.store.ListCards(params)

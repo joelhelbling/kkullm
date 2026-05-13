@@ -134,19 +134,34 @@ type CardUpdateRequest struct {
 	Relations []model.CardRelation `json:"relations,omitempty"`
 }
 
-func (c *Client) ListCards(project, assignee, status, tag string) ([]model.Card, error) {
+type CardListOptions struct {
+	Project      string
+	Assignee     string
+	Status       string
+	Tag          string
+	ArchiveLimit int
+	ArchiveView  string
+}
+
+func (c *Client) ListCards(opts CardListOptions) ([]model.Card, error) {
 	params := url.Values{}
-	if project != "" {
-		params.Set("project", project)
+	if opts.Project != "" {
+		params.Set("project", opts.Project)
 	}
-	if assignee != "" {
-		params.Set("assignee", assignee)
+	if opts.Assignee != "" {
+		params.Set("assignee", opts.Assignee)
 	}
-	if status != "" {
-		params.Set("status", status)
+	if opts.Status != "" {
+		params.Set("status", opts.Status)
 	}
-	if tag != "" {
-		params.Set("tag", tag)
+	if opts.Tag != "" {
+		params.Set("tag", opts.Tag)
+	}
+	if opts.ArchiveLimit > 0 {
+		params.Set("archive_limit", strconv.Itoa(opts.ArchiveLimit))
+	}
+	if opts.ArchiveView != "" {
+		params.Set("archive_view", opts.ArchiveView)
 	}
 	path := "/api/cards"
 	if len(params) > 0 {

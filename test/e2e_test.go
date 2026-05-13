@@ -98,7 +98,11 @@ func TestFullWorkflow(t *testing.T) {
 	}
 
 	// 9. List cards by status + assignee
-	cards, err := c.ListCards("acme-backend", "dev-agent", "todo", "")
+	cards, err := c.ListCards(client.CardListOptions{
+		Project:  "acme-backend",
+		Assignee: "dev-agent",
+		Status:   "todo",
+	})
 	if err != nil {
 		t.Fatalf("list cards: %v", err)
 	}

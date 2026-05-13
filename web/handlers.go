@@ -104,6 +104,10 @@ func initTemplates() {
 	}
 }
 
+// webArchiveLimit caps the number of completed/tabled cards rendered on
+// the main board. Older terminal cards spill into the /archived view.
+const webArchiveLimit = 20
+
 type layoutData struct {
 	Projects         []model.Project
 	Agents           []model.Agent
@@ -313,7 +317,7 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, agentErr.Error(), 404)
 			return
 		}
-		cards, err = ws.store.ListCards(store.CardListParams{Assignee: agent.Name})
+		cards, err = ws.store.ListCards(store.CardListParams{Assignee: agent.Name, ArchiveLimit: webArchiveLimit})
 		showProject = true
 	} else {
 		projectID := r.URL.Query().Get("project")
@@ -330,7 +334,7 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, projErr.Error(), 404)
 			return
 		}
-		cards, err = ws.store.ListCards(store.CardListParams{Project: project.Name})
+		cards, err = ws.store.ListCards(store.CardListParams{Project: project.Name, ArchiveLimit: webArchiveLimit})
 		showProject = false
 	}
 
@@ -355,6 +359,80 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "board", bd); err != nil {
 		log.Printf("render board: %v", err)
+	}
+}
+
+type archivedData struct {
+	Completed   []cardView
+	Tabled      []cardView
+	ShowProject bool
+	Scope       string // human-readable label for the current scope
+	BoardURL    string // URL to return to the live board for the same scope
+}
+
+func (ws *WebServer) handleArchived(w http.ResponseWriter, r *http.Request) {
+	params := store.CardListParams{
+		ArchiveLimit: webArchiveLimit,
+		ArchiveView:  "archived",
+	}
+	var scope, boardURL string
+	showProject := false
+
+	if agentID := r.URL.Query().Get("agent"); agentID != "" {
+		id, parseErr := strconv.Atoi(agentID)
+		if parseErr != nil {
+			http.Error(w, "invalid agent id", 400)
+			return
+		}
+		agent, agentErr := ws.store.GetAgent(id)
+		if agentErr != nil {
+			http.Error(w, agentErr.Error(), 404)
+			return
+		}
+		params.Assignee = agent.Name
+		scope = "agent: " + agent.Name
+		boardURL = "/ui/board?agent=" + strconv.Itoa(id)
+		showProject = true
+	} else {
+		projectID := r.URL.Query().Get("project")
+		if projectID == "" {
+			projectID = "1"
+		}
+		id, parseErr := strconv.Atoi(projectID)
+		if parseErr != nil {
+			http.Error(w, "invalid project id", 400)
+			return
+		}
+		project, projErr := ws.store.GetProject(id)
+		if projErr != nil {
+			http.Error(w, projErr.Error(), 404)
+			return
+		}
+		params.Project = project.Name
+		scope = "project: " + project.Name
+		boardURL = "/ui/board?project=" + strconv.Itoa(id)
+	}
+
+	cards, err := ws.store.ListCards(params)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	data := archivedData{ShowProject: showProject, Scope: scope, BoardURL: boardURL}
+	for _, c := range cards {
+		cv := cardView{Card: c, ShowProject: showProject}
+		switch c.Status {
+		case "completed":
+			data.Completed = append(data.Completed, cv)
+		case "tabled":
+			data.Tabled = append(data.Tabled, cv)
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(w, "archived", data); err != nil {
+		log.Printf("render archived: %v", err)
 	}
 }
 

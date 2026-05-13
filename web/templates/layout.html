@@ -42,6 +42,8 @@
         @click="toggleBlockers()"
         x-text="blockersOpen ? 'Hide Blocked ✕' : 'Blocked! (' + blockerCount + ')'"
       ></button>
+      <button class="nav-archived"
+              @click="loadArchived()">Archived</button>
       <button class="nav-theme-toggle" @click="toggleTheme()" x-text="theme === 'dark' ? '☀' : '🌙'"></button>
     </div>
   </nav>

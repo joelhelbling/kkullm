@@ -90,6 +90,18 @@ function kkullm() {
       htmx.ajax('GET', url, { target: '#board-container', swap: 'innerHTML' });
     },
 
+    loadArchived() {
+      let url;
+      if (this.viewMode === 'agent' && this.currentAgent) {
+        url = '/ui/archived?agent=' + this.currentAgent;
+      } else if (this.currentProject) {
+        url = '/ui/archived?project=' + this.currentProject;
+      } else {
+        return;
+      }
+      htmx.ajax('GET', url, { target: '#board-container', swap: 'innerHTML' });
+    },
+
     // === Drawer ===
 
     closeDrawer() {

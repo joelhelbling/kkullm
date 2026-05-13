@@ -299,6 +299,69 @@ func TestBlockersHandler(t *testing.T) {
 	}
 }
 
+func TestArchivedHandler(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	// Create more completed cards than the cap so some land in the archive.
+	// webArchiveLimit is 20, so we need 21+ completed to see archive overflow.
+	// Use a smaller proxy: just verify the archived endpoint renders and
+	// excludes statuses other than completed/tabled.
+	for i := 0; i < 3; i++ {
+		c, _ := st.CreateCard(store.CardCreateParams{
+			Title:     fmt.Sprintf("Live card %d", i),
+			Status:    "todo",
+			ProjectID: 1,
+		})
+		st.UpdateCard(c.ID, store.CardUpdateParams{Status: strPtr("in_flight")})
+		st.UpdateCard(c.ID, store.CardUpdateParams{Status: strPtr("completed")})
+	}
+	tabledCard, _ := st.CreateCard(store.CardCreateParams{
+		Title:     "Tabled card",
+		ProjectID: 1,
+	})
+	st.UpdateCard(tabledCard.ID, store.CardUpdateParams{Status: strPtr("tabled")})
+
+	// Active card that must NOT appear on the archived page.
+	st.CreateCard(store.CardCreateParams{
+		Title:     "Active todo",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/ui/archived?project=1")
+	if err != nil {
+		t.Fatalf("GET /ui/archived: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	// With only 3 completed and 1 tabled (well under the cap), archived
+	// should be empty for completed and tabled.
+	if !strings.Contains(body, "No archived completed cards") {
+		t.Error("expected empty completed section when under the cap")
+	}
+	if !strings.Contains(body, "No archived tabled cards") {
+		t.Error("expected empty tabled section when under the cap")
+	}
+	if strings.Contains(body, "Active todo") {
+		t.Error("archived view should never include non-terminal cards")
+	}
+	if !strings.Contains(body, "Back to board") {
+		t.Error("expected a back-to-board link")
+	}
+}
+
+func strPtr(s string) *string { return &s }
+
 func TestFullFlow(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 

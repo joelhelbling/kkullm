@@ -29,6 +29,9 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	// Board view
 	mux.HandleFunc("GET /ui/board", ws.handleBoard)
 
+	// Archived view (older completed/tabled cards beyond the board's cap)
+	mux.HandleFunc("GET /ui/archived", ws.handleArchived)
+
 	// Card detail drawer
 	mux.HandleFunc("GET /ui/cards/{id}/drawer", ws.handleDrawer)
 

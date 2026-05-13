@@ -22,6 +22,18 @@ type CardListParams struct {
 	Assignee string
 	Status   string
 	Tag      string
+
+	// ArchiveLimit, when > 0, caps the number of 'completed' and 'tabled'
+	// cards returned. Each terminal status keeps its N most-recently-updated
+	// rows; older ones are considered archived.
+	ArchiveLimit int
+
+	// ArchiveView controls which slice of the completed/tabled rows is returned.
+	// "" (default) returns the active view: all non-terminal statuses plus the
+	// most-recent N of completed/tabled.
+	// "archived" returns only the overflow: completed/tabled rows beyond the
+	// first N. Has no effect when ArchiveLimit is 0.
+	ArchiveView string
 }
 
 type CardUpdateParams struct {
@@ -197,10 +209,20 @@ func (s *Store) loadCardRelations(cardID int) ([]model.CardRelation, error) {
 }
 
 func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
-	query := `
-		SELECT DISTINCT c.id, c.title, COALESCE(c.body, ''), c.status, c.project_id, p.name,
-		       (SELECT COUNT(*) FROM comments WHERE card_id = c.id),
-		       c.created_at, c.updated_at
+	// 'archived' is a slice of completed/tabled only; requesting it without
+	// a positive ArchiveLimit asks for "everything past row 0", which is
+	// every completed/tabled row — that's not what callers mean. Return
+	// empty so the API is unambiguous.
+	if params.ArchiveView == "archived" && params.ArchiveLimit <= 0 {
+		return []model.Card{}, nil
+	}
+
+	baseQuery := `
+		SELECT DISTINCT
+			c.id AS id, c.title AS title, COALESCE(c.body, '') AS body,
+			c.status AS status, c.project_id AS project_id, p.name AS project,
+			(SELECT COUNT(*) FROM comments WHERE card_id = c.id) AS comment_count,
+			c.created_at AS created_at, c.updated_at AS updated_at
 		FROM cards c
 		JOIN projects p ON c.project_id = p.id
 	`
@@ -208,13 +230,13 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 	var conditions []string
 
 	if params.Assignee != "" {
-		query += " JOIN card_assignees ca ON c.id = ca.card_id JOIN agents a ON ca.agent_id = a.id"
+		baseQuery += " JOIN card_assignees ca ON c.id = ca.card_id JOIN agents a ON ca.agent_id = a.id"
 		conditions = append(conditions, "a.name = ?")
 		args = append(args, params.Assignee)
 	}
 
 	if params.Tag != "" {
-		query += " JOIN card_tags ct ON c.id = ct.card_id"
+		baseQuery += " JOIN card_tags ct ON c.id = ct.card_id"
 		conditions = append(conditions, "ct.tag = ?")
 		args = append(args, params.Tag)
 	}
@@ -235,7 +257,43 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 	}
 
 	if len(conditions) > 0 {
-		query += " WHERE " + strings.Join(conditions, " AND ")
+		baseQuery += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	// Wrap the base query in a CTE so the outer SELECT (and its ORDER BY)
+	// sees only the explicit column aliases — no ambiguity from joined
+	// tables that happen to share column names like 'updated_at'.
+	// When ArchiveLimit is set, an inner CTE adds rn per completed/tabled
+	// partition so we can keep the top N (active) or skip them (archived).
+	var query string
+	if params.ArchiveLimit > 0 {
+		archiveFilter := "(status NOT IN ('completed','tabled') OR rn <= ?)"
+		if params.ArchiveView == "archived" {
+			archiveFilter = "(status IN ('completed','tabled') AND rn > ?)"
+		}
+		query = `
+			WITH base AS (` + baseQuery + `),
+			ranked AS (
+				SELECT base.*,
+					CASE WHEN status IN ('completed','tabled')
+					     THEN ROW_NUMBER() OVER (
+					         PARTITION BY status
+					         ORDER BY updated_at DESC, id DESC
+					     )
+					     ELSE NULL
+					END AS rn
+				FROM base
+			)
+			SELECT id, title, body, status, project_id, project, comment_count, created_at, updated_at
+			FROM ranked
+			WHERE ` + archiveFilter
+		args = append(args, params.ArchiveLimit)
+	} else {
+		query = `
+			WITH base AS (` + baseQuery + `)
+			SELECT id, title, body, status, project_id, project, comment_count, created_at, updated_at
+			FROM base
+		`
 	}
 
 	// Prioritized ordering:
@@ -245,9 +303,11 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 	//   4. considering - by max(created_at, updated_at) DESC (most-recent activity wins)
 	//   5. completed   - most recently updated first
 	//   6. tabled      - most recently updated first
+	// Column names are unqualified so this clause works for both the
+	// plain base query and the windowed CTE wrapper.
 	query += `
 		ORDER BY
-			CASE c.status
+			CASE status
 				WHEN 'in_flight'   THEN 1
 				WHEN 'blocked'     THEN 2
 				WHEN 'todo'        THEN 3
@@ -256,14 +316,14 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 				WHEN 'tabled'      THEN 6
 				ELSE 99
 			END,
-			CASE c.status
-				WHEN 'blocked' THEN c.updated_at
+			CASE status
+				WHEN 'blocked' THEN updated_at
 			END ASC,
-			CASE c.status
-				WHEN 'considering' THEN MAX(c.created_at, c.updated_at)
-				ELSE c.updated_at
+			CASE status
+				WHEN 'considering' THEN MAX(created_at, updated_at)
+				ELSE updated_at
 			END DESC,
-			c.id DESC
+			id DESC
 	`
 
 	rows, err := s.db.Query(query, args...)

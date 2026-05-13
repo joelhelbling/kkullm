@@ -1,0 +1,37 @@
+{{define "archived"}}
+<div class="archived-view">
+  <div class="archived-header">
+    <div>
+      <div class="archived-title">Archived</div>
+      <div class="archived-scope">{{.Scope}} · {{len .Completed}} completed, {{len .Tabled}} tabled</div>
+    </div>
+    <a class="archived-back"
+       hx-get="{{.BoardURL}}"
+       hx-target="#board-container"
+       hx-swap="innerHTML"
+       href="#">← Back to board</a>
+  </div>
+
+  <div class="archived-section">
+    <div class="archived-section-header">Completed ({{len .Completed}})</div>
+    {{if .Completed}}
+    <div class="archived-list">
+      {{range .Completed}}{{template "card" .}}{{end}}
+    </div>
+    {{else}}
+    <div class="archived-empty">No archived completed cards.</div>
+    {{end}}
+  </div>
+
+  <div class="archived-section">
+    <div class="archived-section-header">Tabled ({{len .Tabled}})</div>
+    {{if .Tabled}}
+    <div class="archived-list">
+      {{range .Tabled}}{{template "card" .}}{{end}}
+    </div>
+    {{else}}
+    <div class="archived-empty">No archived tabled cards.</div>
+    {{end}}
+  </div>
+</div>
+{{end}}
