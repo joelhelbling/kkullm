@@ -53,26 +53,14 @@
     </div>
   </div>
 
-  {{if gt (len .Tabled) 0}}
-  <template x-if="showClosed">
-    <div style="display:contents">
-      <div class="column" data-status="tabled">
-        <div class="column-header">
-          <span>Tabled</span>
-          <span class="column-count">{{len .Tabled}}</span>
-        </div>
-        <div class="column-cards" data-status="tabled">
-          {{range .Tabled}}{{template "card" .}}{{end}}
-        </div>
-      </div>
+  <div class="column" data-status="tabled">
+    <div class="column-header">
+      <span>Tabled</span>
+      <span class="column-count">{{len .Tabled}}</span>
     </div>
-  </template>
-  {{end}}
+    <div class="column-cards" data-status="tabled">
+      {{range .Tabled}}{{template "card" .}}{{end}}
+    </div>
+  </div>
 </div>
-
-{{if gt (len .Tabled) 0}}
-<div class="closed-toggle" @click="showClosed = !showClosed"
-     x-text="showClosed ? '&#x25BC; Hide closed' : '&#x25B6; Show closed (tabled: {{len .Tabled}})'">
-</div>
-{{end}}
 {{end}}

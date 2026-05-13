@@ -10,7 +10,6 @@ function kkullm() {
     drawerCardId: null,
     blockersOpen: false,
     blockerCount: 0,
-    showClosed: false,
     theme: 'light',
 
     init() {
