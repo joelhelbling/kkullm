@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS cards (
     title TEXT NOT NULL,
     body TEXT,
     status TEXT NOT NULL DEFAULT 'considering'
-        CHECK(status IN ('considering', 'todo', 'in_flight', 'completed', 'done', 'tabled', 'blocked')),
+        CHECK(status IN ('considering', 'todo', 'in_flight', 'completed', 'tabled', 'blocked')),
     project_id INTEGER NOT NULL REFERENCES projects(id),
     created_at DATETIME NOT NULL DEFAULT (datetime('now')),
     updated_at DATETIME NOT NULL DEFAULT (datetime('now'))

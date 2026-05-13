@@ -65,7 +65,6 @@ var ValidStatuses = map[string]bool{
 	"todo":        true,
 	"in_flight":   true,
 	"completed":   true,
-	"done":        true,
 	"tabled":      true,
 	"blocked":     true,
 }
@@ -74,10 +73,9 @@ var ValidTransitions = map[string]map[string]bool{
 	"considering": {"todo": true, "tabled": true},
 	"todo":        {"in_flight": true, "blocked": true, "tabled": true},
 	"in_flight":   {"completed": true, "blocked": true, "tabled": true},
-	"completed":   {"done": true, "in_flight": true, "tabled": true},
+	"completed":   {"in_flight": true, "tabled": true},
 	"blocked":     {"todo": true, "in_flight": true, "tabled": true},
 	"tabled":      {"considering": true, "todo": true},
-	"done":        {},
 }
 
 func CanTransition(from, to string) bool {

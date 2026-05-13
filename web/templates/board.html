@@ -53,18 +53,9 @@
     </div>
   </div>
 
-  {{if or (gt (len .Done) 0) (gt (len .Tabled) 0)}}
+  {{if gt (len .Tabled) 0}}
   <template x-if="showClosed">
     <div style="display:contents">
-      <div class="column" data-status="done">
-        <div class="column-header">
-          <span>Done</span>
-          <span class="column-count">{{len .Done}}</span>
-        </div>
-        <div class="column-cards" data-status="done">
-          {{range .Done}}{{template "card" .}}{{end}}
-        </div>
-      </div>
       <div class="column" data-status="tabled">
         <div class="column-header">
           <span>Tabled</span>
@@ -79,9 +70,9 @@
   {{end}}
 </div>
 
-{{if or (gt (len .Done) 0) (gt (len .Tabled) 0)}}
+{{if gt (len .Tabled) 0}}
 <div class="closed-toggle" @click="showClosed = !showClosed"
-     x-text="showClosed ? '&#x25BC; Hide closed' : '&#x25B6; Show closed (done: {{len .Done}}, tabled: {{len .Tabled}})'">
+     x-text="showClosed ? '&#x25BC; Hide closed' : '&#x25B6; Show closed (tabled: {{len .Tabled}})'">
 </div>
 {{end}}
 {{end}}

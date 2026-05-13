@@ -12,7 +12,7 @@ Kkullm is planned as an open-source, self-hosted system, with a web UI for human
 
 ## Core Concepts
 
-- **Cards**: The central unit of work. Cards have a title, body, assignee(s), comments, project, tags, related cards, and a status lifecycle: `considering` → `todo` → `in_flight` → `completed` → `done` (also `tabled`, `blocked`)
+- **Cards**: The central unit of work. Cards have a title, body, assignee(s), comments, project, tags, related cards, and a status lifecycle: `considering` → `todo` → `in_flight` → `completed` (also `tabled`, `blocked`)
 - **Blackboard pattern**: Agents pull cards relevant to them rather than being pushed tasks
 - **Agent profiles**: Agents have defined responsibilities/roles and capabilities within Kkullm
 - **Two session modes**: Unattended (agent pulls cards, prioritizes, composes prompt, restarts to execute) and user-interactive (collaborative prompt composition)

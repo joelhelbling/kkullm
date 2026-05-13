@@ -120,7 +120,6 @@ type boardData struct {
 	Todo         []cardView
 	InFlight     []cardView
 	Completed    []cardView
-	Done         []cardView
 	Tabled       []cardView
 	BlockedCards []cardView
 	ShowProject  bool
@@ -139,8 +138,6 @@ func groupCards(cards []model.Card, showProject bool) boardData {
 			bd.InFlight = append(bd.InFlight, cv)
 		case "completed":
 			bd.Completed = append(bd.Completed, cv)
-		case "done":
-			bd.Done = append(bd.Done, cv)
 		case "tabled":
 			bd.Tabled = append(bd.Tabled, cv)
 		case "blocked":
