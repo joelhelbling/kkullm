@@ -210,6 +210,28 @@ func buildStatusPills(current string) []statusPill {
 	return pills
 }
 
+// renderDrawer loads comments for the card and writes the rendered drawer
+// template. commentError, when non-empty, is shown above the comment form.
+func (ws *WebServer) renderDrawer(w http.ResponseWriter, card *model.Card, commentError string) {
+	comments, err := ws.store.ListComments(card.ID)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	if comments == nil {
+		comments = []model.Comment{}
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(w, "drawer", drawerData{
+		Card:         card,
+		Comments:     comments,
+		StatusPills:  buildStatusPills(card.Status),
+		CommentError: commentError,
+	}); err != nil {
+		log.Printf("render drawer: %v", err)
+	}
+}
+
 func (ws *WebServer) handleDrawer(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
@@ -223,23 +245,7 @@ func (ws *WebServer) handleDrawer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	comments, err := ws.store.ListComments(id)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	if comments == nil {
-		comments = []model.Comment{}
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.ExecuteTemplate(w, "drawer", drawerData{
-		Card:        card,
-		Comments:    comments,
-		StatusPills: buildStatusPills(card.Status),
-	}); err != nil {
-		log.Printf("render drawer: %v", err)
-	}
+	ws.renderDrawer(w, card, "")
 }
 
 func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) {
@@ -277,22 +283,7 @@ func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) 
 	// target the drawer — return just the updated card tile.
 	hxTarget := r.Header.Get("HX-Target")
 	if hxTarget == "drawer-container" {
-		comments, err := ws.store.ListComments(id)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		if comments == nil {
-			comments = []model.Comment{}
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if err := tmpl.ExecuteTemplate(w, "drawer", drawerData{
-			Card:        card,
-			Comments:    comments,
-			StatusPills: buildStatusPills(card.Status),
-		}); err != nil {
-			log.Printf("render drawer: %v", err)
-		}
+		ws.renderDrawer(w, card, "")
 		return
 	}
 
