@@ -238,7 +238,33 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	query += " ORDER BY c.id"
+	// Prioritized ordering:
+	//   1. in_flight   - most recently updated first (active work surfaces fast)
+	//   2. blocked     - least recently updated first (oldest blocker = most stale)
+	//   3. todo        - most recently updated first (placeholder until per-column ordinals exist)
+	//   4. considering - by max(created_at, updated_at) DESC (most-recent activity wins)
+	//   5. completed   - most recently updated first
+	//   6. tabled      - most recently updated first
+	query += `
+		ORDER BY
+			CASE c.status
+				WHEN 'in_flight'   THEN 1
+				WHEN 'blocked'     THEN 2
+				WHEN 'todo'        THEN 3
+				WHEN 'considering' THEN 4
+				WHEN 'completed'   THEN 5
+				WHEN 'tabled'      THEN 6
+				ELSE 99
+			END,
+			CASE c.status
+				WHEN 'blocked' THEN c.updated_at
+			END ASC,
+			CASE c.status
+				WHEN 'considering' THEN MAX(c.created_at, c.updated_at)
+				ELSE c.updated_at
+			END DESC,
+			c.id DESC
+	`
 
 	rows, err := s.db.Query(query, args...)
 	if err != nil {

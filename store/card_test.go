@@ -244,6 +244,64 @@ func TestListCardsFiltered(t *testing.T) {
 	}
 }
 
+func TestListCardsPrioritizedOrder(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+
+	// Helper: create a card and walk it through valid transitions to land at target.
+	mk := func(title, target string) {
+		t.Helper()
+		c, err := s.CreateCard(CardCreateParams{Title: title, ProjectID: proj.ID})
+		if err != nil {
+			t.Fatalf("CreateCard %q: %v", title, err)
+		}
+		path := map[string][]string{
+			"considering": nil,
+			"todo":        {"todo"},
+			"in_flight":   {"todo", "in_flight"},
+			"blocked":     {"todo", "blocked"},
+			"completed":   {"todo", "in_flight", "completed"},
+			"tabled":      {"tabled"},
+		}[target]
+		for _, step := range path {
+			if _, err := s.UpdateCard(c.ID, CardUpdateParams{Status: strPtr(step)}); err != nil {
+				t.Fatalf("transition %q -> %q on %q: %v", c.Status, step, title, err)
+			}
+		}
+	}
+
+	// One card per status. Order of creation is intentionally not the
+	// expected output order.
+	mk("c-considering", "considering")
+	mk("c-tabled", "tabled")
+	mk("c-completed", "completed")
+	mk("c-todo", "todo")
+	mk("c-blocked", "blocked")
+	mk("c-in_flight", "in_flight")
+
+	cards, err := s.ListCards(CardListParams{Project: proj.Name})
+	if err != nil {
+		t.Fatalf("ListCards: %v", err)
+	}
+
+	wantOrder := []string{
+		"in_flight",   // 1
+		"blocked",     // 2
+		"todo",        // 3
+		"considering", // 4
+		"completed",   // 5
+		"tabled",      // 6
+	}
+	if len(cards) != len(wantOrder) {
+		t.Fatalf("got %d cards, want %d", len(cards), len(wantOrder))
+	}
+	for i, want := range wantOrder {
+		if cards[i].Status != want {
+			t.Errorf("position %d: status = %q, want %q", i, cards[i].Status, want)
+		}
+	}
+}
+
 func TestUpdateCard(t *testing.T) {
 	s := setupTestDB(t)
 	proj := createTestProject(t, s)
