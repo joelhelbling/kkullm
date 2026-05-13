@@ -522,3 +522,55 @@ func TestFullFlow(t *testing.T) {
 		t.Error("blockers should contain the blocked card")
 	}
 }
+
+func TestAddCommentRejectsEmptyBody(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "No empty comments",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	form := strings.NewReader("body=%20%20%20") // whitespace only
+	req, err := http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%s/ui/cards/%d/comments", ts.URL, card.ID), form)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200 (drawer re-render), got %d", resp.StatusCode)
+	}
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	body := string(bodyBytes)
+
+	if !strings.Contains(body, "Comment can&#39;t be empty.") &&
+		!strings.Contains(body, "Comment can't be empty.") {
+		t.Errorf("expected error message in re-rendered drawer, got: %s", body)
+	}
+
+	comments, err := st.ListComments(card.ID)
+	if err != nil {
+		t.Fatalf("ListComments: %v", err)
+	}
+	if len(comments) != 0 {
+		t.Fatalf("expected no comments persisted, got %d", len(comments))
+	}
+}
