@@ -1,3 +1,13 @@
 .claude/settings.local.json
 .superpowers/
 .worktrees/
+
+# Built binary (matches `go build` output in repo root)
+/kkullm
+
+# SQLite databases and WAL/SHM sidecars
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
