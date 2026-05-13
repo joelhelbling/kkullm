@@ -598,3 +598,53 @@ func TestAddCommentBadID(t *testing.T) {
 		t.Errorf("expected 404 for missing card, got %d", resp.StatusCode)
 	}
 }
+
+func TestDrawerHasThreeRowStructure(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Drawer structure",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(fmt.Sprintf("%s/ui/cards/%d/drawer", ts.URL, card.ID))
+	if err != nil {
+		t.Fatalf("GET drawer: %v", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	body := string(bodyBytes)
+
+	for _, cls := range []string{"drawer-top", "drawer-comments", "drawer-composer"} {
+		if !strings.Contains(body, cls) {
+			t.Errorf("expected rendered drawer to contain class %q, got: %s", cls, body)
+		}
+	}
+
+	topIdx := strings.Index(body, "drawer-top")
+	commentsIdx := strings.Index(body, "drawer-comments")
+	composerIdx := strings.Index(body, "drawer-composer")
+	if !(topIdx < commentsIdx && commentsIdx < composerIdx) {
+		t.Errorf("expected drawer-top < drawer-comments < drawer-composer in source order; got %d < %d < %d", topIdx, commentsIdx, composerIdx)
+	}
+
+	listOpen := strings.Index(body, `id="comments-list"`)
+	if listOpen < 0 {
+		t.Fatalf("expected #comments-list in rendered drawer")
+	}
+	listSegment := body[listOpen:composerIdx]
+	if strings.Contains(listSegment, "drawer-composer") {
+		t.Errorf("drawer-composer should be a sibling of, not nested inside, the comments list")
+	}
+}
