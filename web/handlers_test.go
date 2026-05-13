@@ -574,3 +574,27 @@ func TestAddCommentRejectsEmptyBody(t *testing.T) {
 		t.Fatalf("expected no comments persisted, got %d", len(comments))
 	}
 }
+
+func TestAddCommentBadID(t *testing.T) {
+	mux := setupTestMux(t)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	form := strings.NewReader("body=should+not+matter")
+	req, err := http.NewRequest(http.MethodPost,
+		ts.URL+"/ui/cards/99999/comments", form)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 404 {
+		t.Errorf("expected 404 for missing card, got %d", resp.StatusCode)
+	}
+}
