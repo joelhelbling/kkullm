@@ -433,7 +433,9 @@ body {
   background: var(--bg-surface);
   border-left: 1px solid var(--border);
   z-index: 201;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   transform: translateX(100%);
   transition: transform 0.25s ease;
 }
@@ -739,4 +741,34 @@ body {
 .form-error {
   font-size: 12px;
   color: #c0392b;
+}
+
+/* ===== Drawer three-row layout ===== */
+.drawer-top {
+  flex: 0 1 auto;
+  overflow-y: auto;
+}
+
+.drawer-comments {
+  flex: 1 1 0;
+  min-height: 120px;
+  overflow-y: auto;
+  position: relative;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.drawer-comments-label {
+  margin-bottom: 6px;
+}
+
+.drawer-composer {
+  flex: 0 0 auto;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.drawer-composer .comment-form {
+  margin-top: 0;
 }
