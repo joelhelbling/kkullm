@@ -105,4 +105,22 @@
     </div>
   </form>
 </div>
+<script>
+(function() {
+  var el = document.querySelector('#drawer-container .drawer-comments');
+  if (!el) return;
+
+  function update() {
+    var atTop = el.scrollTop <= 0;
+    var atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+    el.classList.toggle('has-shadow-top', !atTop);
+    el.classList.toggle('has-shadow-bottom', !atBottom);
+  }
+
+  el.scrollTop = el.scrollHeight;
+  update();
+
+  el.addEventListener('scroll', update, { passive: true });
+})();
+</script>
 {{end}}
