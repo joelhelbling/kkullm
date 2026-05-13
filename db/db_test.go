@@ -63,3 +63,37 @@ func TestSeed(t *testing.T) {
 		t.Fatalf("second Seed call failed: %v", err)
 	}
 }
+
+func TestSeedCreatesUserAgent(t *testing.T) {
+	database, err := Open(":memory:")
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer database.Close()
+
+	if err := Migrate(database); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	if err := Seed(database); err != nil {
+		t.Fatalf("Seed: %v", err)
+	}
+
+	var count int
+	if err := database.QueryRow(`SELECT COUNT(*) FROM agents WHERE name = 'user'`).Scan(&count); err != nil {
+		t.Fatalf("query user agent: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected exactly 1 'user' agent after Seed, got %d", count)
+	}
+
+	// Idempotency: re-running Seed must not duplicate.
+	if err := Seed(database); err != nil {
+		t.Fatalf("re-Seed: %v", err)
+	}
+	if err := database.QueryRow(`SELECT COUNT(*) FROM agents WHERE name = 'user'`).Scan(&count); err != nil {
+		t.Fatalf("query user agent after re-seed: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected 1 'user' agent after re-Seed, got %d", count)
+	}
+}
