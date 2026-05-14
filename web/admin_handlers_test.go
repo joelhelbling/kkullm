@@ -185,6 +185,65 @@ func TestAdminDeleteAgent_OK(t *testing.T) {
 	}
 }
 
+func TestAdminPurge_RejectsWrongPhrase(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+	if _, err := st.CreateProject("alpha", ""); err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+
+	form := url.Values{"confirm": {"purge database"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/danger/purge",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+	projects, err := st.ListProjects()
+	if err != nil {
+		t.Fatalf("ListProjects: %v", err)
+	}
+	found := false
+	for _, p := range projects {
+		if p.Name == "alpha" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected 'alpha' project to still exist after rejected purge")
+	}
+}
+
+func TestAdminPurge_AcceptsExactPhrase(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+	if _, err := st.CreateProject("alpha", ""); err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+
+	form := url.Values{"confirm": {"PURGE DATABASE"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/danger/purge",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusFound {
+		t.Fatalf("expected redirect, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+	projects, err := st.ListProjects()
+	if err != nil {
+		t.Fatalf("ListProjects: %v", err)
+	}
+	for _, p := range projects {
+		if p.Name == "alpha" {
+			t.Errorf("expected 'alpha' project to be gone after purge, found %+v", p)
+		}
+	}
+}
+
 func TestAdminDanger_Renders(t *testing.T) {
 	mux := setupTestMux(t)
 	rec := httptest.NewRecorder()
