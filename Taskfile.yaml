@@ -1,0 +1,32 @@
+version: '3'
+
+vars:
+  BINARY: kkullm
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  build:
+    desc: Compile the kkullm binary into the repo root
+    cmds:
+      - go build -o {{.BINARY}} .
+    sources:
+      - '**/*.go'
+      - go.mod
+      - go.sum
+    generates:
+      - '{{.BINARY}}'
+
+  clean:
+    desc: Remove the compiled binary
+    cmds:
+      - rm -f {{.BINARY}}
+
+  test:
+    desc: Run the full Go test suite
+    cmds:
+      - go test ./...
