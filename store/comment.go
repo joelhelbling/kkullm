@@ -37,7 +37,7 @@ func (s *Store) CreateComment(cardID, agentID int, body string) (*model.Comment,
 
 	c := &model.Comment{}
 	err = s.db.QueryRow(`
-		SELECT c.id, c.card_id, c.agent_id, COALESCE(a.name, c.author_name, ''), c.body, c.created_at
+		SELECT c.id, c.card_id, COALESCE(c.agent_id, 0), COALESCE(a.name, c.author_name, ''), c.body, c.created_at
 		FROM comments c LEFT JOIN agents a ON c.agent_id = a.id
 		WHERE c.id = ?
 	`, id).Scan(&c.ID, &c.CardID, &c.AgentID, &c.Agent, &c.Body, &c.CreatedAt)
@@ -49,7 +49,7 @@ func (s *Store) CreateComment(cardID, agentID int, body string) (*model.Comment,
 
 func (s *Store) ListComments(cardID int) ([]model.Comment, error) {
 	rows, err := s.db.Query(`
-		SELECT c.id, c.card_id, c.agent_id, COALESCE(a.name, c.author_name, ''), c.body, c.created_at
+		SELECT c.id, c.card_id, COALESCE(c.agent_id, 0), COALESCE(a.name, c.author_name, ''), c.body, c.created_at
 		FROM comments c LEFT JOIN agents a ON c.agent_id = a.id
 		WHERE c.card_id = ?
 		ORDER BY c.created_at ASC

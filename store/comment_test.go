@@ -72,3 +72,37 @@ func TestCreateAndListComments(t *testing.T) {
 		t.Errorf("comment_count = %d, want 2", got.CommentCount)
 	}
 }
+
+// Regression: after the author has been deleted, comments.agent_id is NULL,
+// and ListComments must still return the rows (scanning NULL into the model's
+// int AgentID via COALESCE), surfacing the snapshot name.
+func TestListComments_HandlesDeletedAuthor(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	agent := createTestAgent(t, s, "queen_bee", proj.ID)
+
+	card, _ := s.CreateCard(CardCreateParams{
+		Title: "Test card", Status: "todo", ProjectID: proj.ID,
+	})
+	if _, err := s.CreateComment(card.ID, agent.ID, "discretion above all"); err != nil {
+		t.Fatalf("CreateComment: %v", err)
+	}
+
+	if err := s.DeleteAgent(agent.ID); err != nil {
+		t.Fatalf("DeleteAgent: %v", err)
+	}
+
+	comments, err := s.ListComments(card.ID)
+	if err != nil {
+		t.Fatalf("ListComments after agent delete: %v", err)
+	}
+	if len(comments) != 1 {
+		t.Fatalf("got %d comments, want 1", len(comments))
+	}
+	if comments[0].AgentID != 0 {
+		t.Errorf("AgentID = %d, want 0 (sentinel for deleted agent)", comments[0].AgentID)
+	}
+	if comments[0].Agent != "queen_bee" {
+		t.Errorf("Agent = %q, want snapshot %q", comments[0].Agent, "queen_bee")
+	}
+}
