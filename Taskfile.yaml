@@ -18,6 +18,9 @@ tasks:
       - '**/*.go'
       - go.mod
       - go.sum
+      - web/static/**/*
+      - web/templates/**/*
+      - db/migrations/**/*
     generates:
       - '{{.BINARY}}'
 
