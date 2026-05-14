@@ -4,11 +4,41 @@
 <p class="admin-desc">Rename or delete projects. Deleting a project permanently removes its cards, comments, agents, and assets.</p>
 <ul class="admin-list">
 {{range .Projects}}
-  <li class="admin-row">
-    <span class="admin-name">{{.Name}}</span>
+  <li class="admin-row" data-project-id="{{.ID}}" data-project-name="{{.Name}}">
+    <form method="post" action="/admin/projects/{{.ID}}/rename" class="inline-rename">
+      <input type="text" name="name" value="{{.Name}}" class="inline-rename-input" aria-label="Project name">
+      <button type="submit" class="btn-small">Save</button>
+    </form>
     <span class="admin-meta">{{.CardCount}} cards · {{.AgentCount}} agents</span>
+    <button type="button" class="btn-outlined-danger" onclick="openDeleteProjectModal(this)">Delete</button>
   </li>
 {{end}}
 </ul>
+
+<div id="delete-project-modal" class="modal" hidden>
+  <div class="modal-content danger-panel">
+    <h2>Delete project</h2>
+    <p>This cannot be undone. All cards, comments, agents, and assets in this project will be permanently deleted.</p>
+    <form method="post" id="delete-project-form">
+      <label for="dp-confirm">Type the project name <code id="dp-name"></code> to enable:</label>
+      <input id="dp-confirm" type="text" name="confirm" autocomplete="off" class="mono"
+             oninput="document.getElementById('dp-btn').disabled = this.value !== document.getElementById('dp-name').textContent">
+      <button type="button" onclick="document.getElementById('delete-project-modal').hidden = true">Cancel</button>
+      <button id="dp-btn" type="submit" class="btn-danger" disabled>Delete</button>
+    </form>
+  </div>
+</div>
+<script>
+function openDeleteProjectModal(btn) {
+  const row = btn.closest('.admin-row');
+  const id = row.dataset.projectId;
+  const name = row.dataset.projectName;
+  document.getElementById('dp-name').textContent = name;
+  document.getElementById('delete-project-form').action = '/admin/projects/' + id + '/delete';
+  document.getElementById('dp-confirm').value = '';
+  document.getElementById('dp-btn').disabled = true;
+  document.getElementById('delete-project-modal').hidden = false;
+}
+</script>
 {{template "admin_shell_bottom" .}}
 {{end}}

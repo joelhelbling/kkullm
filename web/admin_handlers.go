@@ -1,7 +1,11 @@
 package web
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/joelhelbling/kkullm/model"
 )
@@ -67,6 +71,56 @@ func (ws *WebServer) handleAdminAgents(w http.ResponseWriter, r *http.Request) {
 	if err := tmpl.ExecuteTemplate(w, "admin_agents", adminAgentsData{Section: "agents", Agents: agents}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (ws *WebServer) handleAdminRenameProject(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	if err := ws.store.RenameProject(id, name); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Redirect(w, r, "/admin/projects", http.StatusSeeOther)
+}
+
+func (ws *WebServer) handleAdminDeleteProject(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	p, err := ws.store.GetProject(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Stale id — recover by redirecting back to list.
+			http.Redirect(w, r, "/admin/projects", http.StatusSeeOther)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if r.FormValue("confirm") != p.Name {
+		http.Error(w, "confirmation does not match project name", http.StatusBadRequest)
+		return
+	}
+	if err := ws.store.DeleteProject(id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/admin/projects", http.StatusSeeOther)
 }
 
 func (ws *WebServer) handleAdminDanger(w http.ResponseWriter, r *http.Request) {
