@@ -2077,6 +2077,15 @@ body::before {
   margin-bottom: 8px;
 }
 
+/* The embedded <code> identifier inside a danger-panel label is the literal
+   string the user must type, so it must NOT inherit the label's uppercase
+   text-transform — otherwise the rendered hint and the required input
+   disagree on case. */
+.danger-panel label code {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .danger-form {
   display: flex;
   flex-direction: column;
