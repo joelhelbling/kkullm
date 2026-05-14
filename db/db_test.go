@@ -66,7 +66,10 @@ func TestSeed(t *testing.T) {
 }
 
 func TestMigrate_AddsAuthorNameColumnAndNullableAgentID(t *testing.T) {
-	dbConn, _ := Open(":memory:")
+	dbConn, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer dbConn.Close()
 	if err := Migrate(dbConn); err != nil {
 		t.Fatalf("migrate: %v", err)
@@ -95,7 +98,10 @@ func TestMigrate_AddsAuthorNameColumnAndNullableAgentID(t *testing.T) {
 }
 
 func TestMigrate_IdempotentAcrossRuns(t *testing.T) {
-	d, _ := Open(":memory:")
+	d, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer d.Close()
 	if err := Migrate(d); err != nil {
 		t.Fatalf("first migrate: %v", err)
