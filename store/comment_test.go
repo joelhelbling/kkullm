@@ -4,6 +4,39 @@ import (
 	"testing"
 )
 
+func TestCreateComment_SnapshotsAuthorName(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	agent := createTestAgent(t, s, "snapshot-agent", proj.ID)
+
+	card, err := s.CreateCard(CardCreateParams{
+		Title: "Test card", Status: "todo", ProjectID: proj.ID,
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	comment, err := s.CreateComment(card.ID, agent.ID, "hello")
+	if err != nil {
+		t.Fatalf("CreateComment: %v", err)
+	}
+
+	var authorName *string
+	err = s.db.QueryRow(`SELECT author_name FROM comments WHERE id = ?`, comment.ID).Scan(&authorName)
+	if err != nil {
+		t.Fatalf("query author_name: %v", err)
+	}
+	if authorName == nil {
+		t.Fatal("author_name is NULL, want snapshot of agent name")
+	}
+	if *authorName != agent.Name {
+		t.Errorf("author_name = %q, want %q", *authorName, agent.Name)
+	}
+	if comment.Agent != agent.Name {
+		t.Errorf("comment.Agent = %q, want %q", comment.Agent, agent.Name)
+	}
+}
+
 func TestCreateAndListComments(t *testing.T) {
 	s := setupTestDB(t)
 	proj := createTestProject(t, s)
