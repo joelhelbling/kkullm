@@ -31,6 +31,8 @@ type adminDangerData struct {
 	Section string
 }
 
+const purgePhrase = "PURGE DATABASE"
+
 func (ws *WebServer) handleAdminRoot(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/projects", http.StatusSeeOther)
 }
@@ -165,3 +167,24 @@ func (ws *WebServer) handleAdminDanger(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
+
+func (ws *WebServer) handleAdminPurge(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if r.FormValue("confirm") != purgePhrase {
+		http.Error(w, "confirmation phrase does not match", http.StatusBadRequest)
+		return
+	}
+	if err := ws.store.Purge(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	ws.broadcastDatasetReset()
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// broadcastDatasetReset is filled in by Task 16 (SSE). Stub now so this
+// task can wire in the call site.
+func (ws *WebServer) broadcastDatasetReset() {}
