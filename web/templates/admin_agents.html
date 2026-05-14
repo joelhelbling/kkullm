@@ -1,0 +1,14 @@
+{{define "admin_agents"}}
+{{template "admin_shell_top" .}}
+<h1>Agents</h1>
+<p class="admin-desc">Rename or delete agents. Deleting an agent unassigns their cards; their comments are preserved with attribution.</p>
+<ul class="admin-list">
+{{range .Agents}}
+  <li class="admin-row">
+    <span class="admin-name">{{.Name}}</span>
+    <span class="admin-meta">project: {{.Project}}</span>
+  </li>
+{{end}}
+</ul>
+{{template "admin_shell_bottom" .}}
+{{end}}

@@ -1,0 +1,33 @@
+{{define "admin_shell_top"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>kkullm — admin</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-left">
+    <a href="/" class="brand">
+      <span class="brand-mark">끌림</span>
+      <span class="brand-name">kkullm</span>
+    </a>
+  </div>
+</nav>
+<div class="admin">
+  <nav class="admin-menu" aria-label="Admin sections">
+    <a href="/admin/projects" class="{{if eq .Section "projects"}}active{{end}}">Projects</a>
+    <a href="/admin/agents" class="{{if eq .Section "agents"}}active{{end}}">Agents</a>
+    <div class="admin-menu-divider" aria-hidden="true"></div>
+    <a href="/admin/danger" class="{{if eq .Section "danger"}}active{{end}} danger">Danger Zone</a>
+  </nav>
+  <main class="admin-main">
+{{end}}
+
+{{define "admin_shell_bottom"}}
+  </main>
+</div>
+</body>
+</html>
+{{end}}

@@ -107,6 +107,24 @@ func (s *Store) DeleteProject(id int) error {
 	return tx.Commit()
 }
 
+func (s *Store) CountCardsForProject(projectID int) (int, error) {
+	var n int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM cards WHERE project_id = ?", projectID).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count cards for project %d: %w", projectID, err)
+	}
+	return n, nil
+}
+
+func (s *Store) CountAgentsForProject(projectID int) (int, error) {
+	var n int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM agents WHERE project_id = ?", projectID).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count agents for project %d: %w", projectID, err)
+	}
+	return n, nil
+}
+
 func (s *Store) ListProjects() ([]model.Project, error) {
 	rows, err := s.db.Query("SELECT id, name, COALESCE(description, ''), created_at, updated_at FROM projects ORDER BY name")
 	if err != nil {

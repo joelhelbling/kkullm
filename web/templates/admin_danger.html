@@ -1,0 +1,15 @@
+{{define "admin_danger"}}
+{{template "admin_shell_top" .}}
+<h1>Danger Zone</h1>
+<div class="danger-panel">
+  <h2>Purge database</h2>
+  <p>This cannot be undone. All projects, agents, cards, comments, and assets will be permanently deleted. After purge, the system returns to a fresh-install state.</p>
+  <form method="post" action="/admin/danger/purge" class="danger-form">
+    <label for="purge-confirm">Type <code>PURGE DATABASE</code> to enable:</label>
+    <input id="purge-confirm" type="text" name="confirm" autocomplete="off" class="mono"
+           oninput="document.getElementById('purge-btn').disabled = this.value !== 'PURGE DATABASE'">
+    <button id="purge-btn" type="submit" class="btn-danger" disabled>Purge</button>
+  </form>
+</div>
+{{template "admin_shell_bottom" .}}
+{{end}}

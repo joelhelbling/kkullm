@@ -1,0 +1,14 @@
+{{define "admin_projects"}}
+{{template "admin_shell_top" .}}
+<h1>Projects</h1>
+<p class="admin-desc">Rename or delete projects. Deleting a project permanently removes its cards, comments, agents, and assets.</p>
+<ul class="admin-list">
+{{range .Projects}}
+  <li class="admin-row">
+    <span class="admin-name">{{.Name}}</span>
+    <span class="admin-meta">{{.CardCount}} cards · {{.AgentCount}} agents</span>
+  </li>
+{{end}}
+</ul>
+{{template "admin_shell_bottom" .}}
+{{end}}
