@@ -495,6 +495,27 @@ func (ws *WebServer) handleAddComment(w http.ResponseWriter, r *http.Request) {
 	ws.renderDrawer(w, card, "")
 }
 
+func (ws *WebServer) handleDeleteCard(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "bad id", 400)
+		return
+	}
+	if err := ws.store.DeleteCard(id); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	ws.broadcastCardDeleted(id)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// broadcastCardDeleted is filled in by Task 16. Stub now so this task can wire in the call site.
+func (ws *WebServer) broadcastCardDeleted(id int) {}
+
 func (ws *WebServer) handleBlockers(w http.ResponseWriter, r *http.Request) {
 	cards, err := ws.store.ListCards(store.CardListParams{
 		Status: "blocked",

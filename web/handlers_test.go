@@ -599,6 +599,44 @@ func TestAddCommentBadID(t *testing.T) {
 	}
 }
 
+func TestDeleteCardFromDrawer_OK(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Doomed card",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost,
+		fmt.Sprintf("/ui/cards/%d/delete", card.ID), nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusFound {
+		t.Fatalf("expected redirect, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+
+	if got, err := st.GetCard(card.ID); err == nil {
+		t.Errorf("expected card to be deleted, got %+v", got)
+	}
+}
+
+func TestDeleteCardFromDrawer_StaleIDIsIdempotent(t *testing.T) {
+	mux := setupTestMux(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/ui/cards/99999/delete", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusFound {
+		t.Fatalf("expected redirect for stale id, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+}
+
 func TestDrawerHasThreeRowStructure(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
