@@ -68,6 +68,45 @@ func (s *Store) RenameProject(id int, name string) error {
 	return nil
 }
 
+func (s *Store) DeleteProject(id int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec("DELETE FROM cards WHERE project_id = ?", id); err != nil {
+		return fmt.Errorf("delete cards: %w", err)
+	}
+	if _, err := tx.Exec("DELETE FROM project_assets WHERE project_id = ?", id); err != nil {
+		return fmt.Errorf("delete assets: %w", err)
+	}
+	if _, err := tx.Exec(
+		"UPDATE comments SET agent_id = NULL WHERE agent_id IN (SELECT id FROM agents WHERE project_id = ?)",
+		id,
+	); err != nil {
+		return fmt.Errorf("null cross-project comment refs: %w", err)
+	}
+	if _, err := tx.Exec(
+		"DELETE FROM card_assignees WHERE agent_id IN (SELECT id FROM agents WHERE project_id = ?)",
+		id,
+	); err != nil {
+		return fmt.Errorf("clear cross-project assignees: %w", err)
+	}
+	if _, err := tx.Exec("DELETE FROM agents WHERE project_id = ?", id); err != nil {
+		return fmt.Errorf("delete agents: %w", err)
+	}
+	res, err := tx.Exec("DELETE FROM projects WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("delete project %d: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("project %d not found", id)
+	}
+	return tx.Commit()
+}
+
 func (s *Store) ListProjects() ([]model.Project, error) {
 	rows, err := s.db.Query("SELECT id, name, COALESCE(description, ''), created_at, updated_at FROM projects ORDER BY name")
 	if err != nil {
