@@ -466,9 +466,13 @@ func (s *Store) UpdateCard(id int, p CardUpdateParams) (*model.Card, error) {
 }
 
 func (s *Store) DeleteCard(id int) error {
-	_, err := s.db.Exec("DELETE FROM cards WHERE id = ?", id)
+	res, err := s.db.Exec("DELETE FROM cards WHERE id = ?", id)
 	if err != nil {
 		return fmt.Errorf("delete card %d: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("card %d not found", id)
 	}
 	return nil
 }
