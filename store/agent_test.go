@@ -121,6 +121,73 @@ func TestRenameAgent_EmptyName(t *testing.T) {
 	}
 }
 
+func TestDeleteAgent_UnassignsCards_PreservesComments(t *testing.T) {
+	s := setupTestDB(t)
+
+	proj := createTestProject(t, s)
+	agent := createTestAgent(t, s, "alice", proj.ID)
+
+	card, err := s.CreateCard(CardCreateParams{
+		Title:     "Test card",
+		ProjectID: proj.ID,
+		Assignees: []string{"alice"},
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	if _, err := s.CreateComment(card.ID, agent.ID, "Working on it"); err != nil {
+		t.Fatalf("CreateComment: %v", err)
+	}
+
+	if err := s.DeleteAgent(agent.ID); err != nil {
+		t.Fatalf("DeleteAgent: %v", err)
+	}
+
+	var n int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM agents WHERE id = ?", agent.ID).Scan(&n); err != nil {
+		t.Fatalf("count agents: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("agents rows for id = %d, want 0", n)
+	}
+
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM cards WHERE id = ?", card.ID).Scan(&n); err != nil {
+		t.Fatalf("count cards: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("cards rows for id = %d, want 1", n)
+	}
+
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM card_assignees WHERE agent_id = ?", agent.ID).Scan(&n); err != nil {
+		t.Fatalf("count card_assignees: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("card_assignees rows for agent_id = %d, want 0", n)
+	}
+
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM comments WHERE card_id = ?", card.ID).Scan(&n); err != nil {
+		t.Fatalf("count comments: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("comments rows = %d, want 1", n)
+	}
+
+	var (
+		agentID    *int
+		authorName string
+	)
+	if err := s.db.QueryRow("SELECT agent_id, author_name FROM comments WHERE card_id = ?", card.ID).Scan(&agentID, &authorName); err != nil {
+		t.Fatalf("query comment: %v", err)
+	}
+	if agentID != nil {
+		t.Errorf("comment.agent_id = %v, want NULL", *agentID)
+	}
+	if authorName != "alice" {
+		t.Errorf("comment.author_name = %q, want %q", authorName, "alice")
+	}
+}
+
 func TestGetAgentByName(t *testing.T) {
 	s := setupTestDB(t)
 

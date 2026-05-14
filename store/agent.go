@@ -74,6 +74,30 @@ func (s *Store) RenameAgent(id int, name string) error {
 	return tx.Commit()
 }
 
+func (s *Store) DeleteAgent(id int) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec("DELETE FROM card_assignees WHERE agent_id = ?", id); err != nil {
+		return fmt.Errorf("clear assignees: %w", err)
+	}
+	if _, err := tx.Exec("UPDATE comments SET agent_id = NULL WHERE agent_id = ?", id); err != nil {
+		return fmt.Errorf("null comment agent: %w", err)
+	}
+	res, err := tx.Exec("DELETE FROM agents WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("delete agent %d: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("agent %d not found", id)
+	}
+	return tx.Commit()
+}
+
 func (s *Store) ListAgents(projectName string) ([]model.Agent, error) {
 	query := `
 		SELECT a.id, a.name, a.project_id, p.name, COALESCE(a.bio, ''), a.created_at, a.updated_at
