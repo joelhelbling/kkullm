@@ -30,3 +30,9 @@ tasks:
     desc: Run the full Go test suite
     cmds:
       - go test ./...
+
+  dev-seed:
+    desc: Reset and reseed the dev DB with beehive/birds_nest/ant_hill demo data (requires `kkullm serve` running)
+    cmds:
+      - ./scripts/dev-seed.sh
+    interactive: true
