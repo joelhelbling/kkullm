@@ -31,12 +31,14 @@ func Open(path string) (*sql.DB, error) {
 }
 
 func Migrate(db *sql.DB) error {
-	data, err := migrations.ReadFile("migrations/001_initial.sql")
-	if err != nil {
-		return fmt.Errorf("read migration: %w", err)
-	}
-	if _, err := db.Exec(string(data)); err != nil {
-		return fmt.Errorf("exec migration: %w", err)
+	for _, name := range []string{"migrations/001_initial.sql", "migrations/002_comments_author_snapshot.sql"} {
+		data, err := migrations.ReadFile(name)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", name, err)
+		}
+		if _, err := db.Exec(string(data)); err != nil {
+			return fmt.Errorf("exec %s: %w", name, err)
+		}
 	}
 	return nil
 }
