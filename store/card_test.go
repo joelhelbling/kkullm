@@ -476,3 +476,55 @@ func TestUpdateCardAddRelations(t *testing.T) {
 		t.Errorf("relation_type = %q, want 'blocked_by'", updated.Relations[0].RelationType)
 	}
 }
+
+func TestDeleteCard_CascadesCommentsAndAssignees(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	agent := createTestAgent(t, s, "deleter-agent", proj.ID)
+
+	card, err := s.CreateCard(CardCreateParams{
+		Title:     "Doomed card",
+		ProjectID: proj.ID,
+		Assignees: []string{agent.Name},
+		Tags:      []string{"goner"},
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	if _, err := s.CreateComment(card.ID, agent.ID, "farewell"); err != nil {
+		t.Fatalf("CreateComment: %v", err)
+	}
+
+	if err := s.DeleteCard(card.ID); err != nil {
+		t.Fatalf("DeleteCard: %v", err)
+	}
+
+	var cardCount int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM cards WHERE id = ?", card.ID).Scan(&cardCount); err != nil {
+		t.Fatalf("count cards: %v", err)
+	}
+	if cardCount != 0 {
+		t.Errorf("cards count = %d, want 0", cardCount)
+	}
+
+	var commentCount int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM comments WHERE card_id = ?", card.ID).Scan(&commentCount); err != nil {
+		t.Fatalf("count comments: %v", err)
+	}
+	if commentCount != 0 {
+		t.Errorf("comments count = %d, want 0 (cascade)", commentCount)
+	}
+
+	var assigneeCount int
+	if err := s.db.QueryRow("SELECT COUNT(*) FROM card_assignees WHERE card_id = ?", card.ID).Scan(&assigneeCount); err != nil {
+		t.Fatalf("count card_assignees: %v", err)
+	}
+	if assigneeCount != 0 {
+		t.Errorf("card_assignees count = %d, want 0 (cascade)", assigneeCount)
+	}
+
+	if err := s.DeleteCard(card.ID); err == nil {
+		t.Errorf("DeleteCard on missing id: expected error, got nil")
+	}
+}
