@@ -110,6 +110,14 @@
       <button type="submit">Comment</button>
     </div>
   </form>
+  <div class="drawer-delete">
+    <form method="post" action="/ui/cards/{{.Card.ID}}/delete">
+      <button type="submit" class="link-danger"
+              onclick="return confirm('Delete card &quot;{{.Card.Title}}&quot;? This cannot be undone.')">
+        Delete card
+      </button>
+    </form>
+  </div>
 </div>
 <script>
 (function() {
