@@ -2067,23 +2067,17 @@ body::before {
   max-width: 64ch;
 }
 
+/* Labels in a danger-panel render in normal case — they often contain a
+   literal identifier (project name, exact phrase) inside <code> that the
+   user must type verbatim, and uppercasing the label would visually rewrite
+   that identifier while the JS comparison reads textContent (original case),
+   producing a hint that disagrees with the required input. */
 .danger-panel label {
   display: block;
   font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 12px;
   color: var(--text-secondary);
   margin-bottom: 8px;
-}
-
-/* The embedded <code> identifier inside a danger-panel label is the literal
-   string the user must type, so it must NOT inherit the label's uppercase
-   text-transform — otherwise the rendered hint and the required input
-   disagree on case. */
-.danger-panel label code {
-  text-transform: none;
-  letter-spacing: 0;
 }
 
 .danger-form {
