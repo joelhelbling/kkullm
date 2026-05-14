@@ -94,6 +94,17 @@ func TestMigrate_AddsAuthorNameColumnAndNullableAgentID(t *testing.T) {
 	}
 }
 
+func TestMigrate_IdempotentAcrossRuns(t *testing.T) {
+	d, _ := Open(":memory:")
+	defer d.Close()
+	if err := Migrate(d); err != nil {
+		t.Fatalf("first migrate: %v", err)
+	}
+	if err := Migrate(d); err != nil {
+		t.Fatalf("second migrate should be no-op, got: %v", err)
+	}
+}
+
 func TestSeedCreatesUserAgent(t *testing.T) {
 	database, err := Open(":memory:")
 	if err != nil {
