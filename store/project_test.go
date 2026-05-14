@@ -117,6 +117,54 @@ func TestRenameProject_Empty(t *testing.T) {
 	}
 }
 
+func TestDeleteProject_CascadesAllChildren(t *testing.T) {
+	s := setupTestDB(t)
+
+	proj := createTestProject(t, s)
+	agent := createTestAgent(t, s, "doomed-agent", proj.ID)
+
+	card, err := s.CreateCard(CardCreateParams{
+		Title:     "doomed card",
+		ProjectID: proj.ID,
+		Assignees: []string{agent.Name},
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	if _, err := s.CreateComment(card.ID, agent.ID, "doomed comment"); err != nil {
+		t.Fatalf("CreateComment: %v", err)
+	}
+
+	if _, err := s.db.Exec(
+		"INSERT INTO project_assets (project_id, name, description, url) VALUES (?, ?, ?, ?)",
+		proj.ID, "docs", "Some docs", "https://example.com",
+	); err != nil {
+		t.Fatalf("insert project_asset: %v", err)
+	}
+
+	if err := s.DeleteProject(proj.ID); err != nil {
+		t.Fatalf("DeleteProject: %v", err)
+	}
+
+	assertCount := func(label, query string, args ...any) {
+		t.Helper()
+		var n int
+		if err := s.db.QueryRow(query, args...).Scan(&n); err != nil {
+			t.Fatalf("%s count query: %v", label, err)
+		}
+		if n != 0 {
+			t.Errorf("%s: got %d rows, want 0", label, n)
+		}
+	}
+
+	assertCount("projects", "SELECT COUNT(*) FROM projects WHERE id = ?", proj.ID)
+	assertCount("agents", "SELECT COUNT(*) FROM agents WHERE project_id = ?", proj.ID)
+	assertCount("cards", "SELECT COUNT(*) FROM cards WHERE project_id = ?", proj.ID)
+	assertCount("comments", "SELECT COUNT(*) FROM comments WHERE card_id = ?", card.ID)
+	assertCount("project_assets", "SELECT COUNT(*) FROM project_assets WHERE project_id = ?", proj.ID)
+}
+
 func TestGetProjectByID(t *testing.T) {
 	s := setupTestDB(t)
 
