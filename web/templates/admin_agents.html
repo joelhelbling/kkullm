@@ -5,8 +5,14 @@
 <ul class="admin-list">
 {{range .Agents}}
   <li class="admin-row">
-    <span class="admin-name">{{.Name}}</span>
+    <form method="post" action="/admin/agents/{{.ID}}/rename" class="inline-rename">
+      <input type="text" name="name" value="{{.Name}}" class="inline-rename-input" aria-label="Agent name">
+    </form>
     <span class="admin-meta">project: {{.Project}}</span>
+    <form method="post" action="/admin/agents/{{.ID}}/delete" class="admin-delete-form">
+      <button type="submit" class="btn-outlined-danger"
+              onclick="return confirm('Delete agent {{.Name}}? Their cards will be unassigned; comments preserved.')">Delete</button>
+    </form>
   </li>
 {{end}}
 </ul>

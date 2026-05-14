@@ -53,6 +53,8 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	mux.Handle("GET /admin/danger", RequireAdmin(http.HandlerFunc(ws.handleAdminDanger)))
 	mux.Handle("POST /admin/projects/{id}/rename", RequireAdmin(http.HandlerFunc(ws.handleAdminRenameProject)))
 	mux.Handle("POST /admin/projects/{id}/delete", RequireAdmin(http.HandlerFunc(ws.handleAdminDeleteProject)))
+	mux.Handle("POST /admin/agents/{id}/rename", RequireAdmin(http.HandlerFunc(ws.handleAdminRenameAgent)))
+	mux.Handle("POST /admin/agents/{id}/delete", RequireAdmin(http.HandlerFunc(ws.handleAdminDeleteAgent)))
 
 	// Static files (no-cache during development so edits are visible on reload)
 	staticFS, err := fs.Sub(content, "static")

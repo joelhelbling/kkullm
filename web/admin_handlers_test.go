@@ -132,6 +132,59 @@ func TestAdminDeleteProject_AcceptsMatchedConfirm(t *testing.T) {
 	}
 }
 
+func TestAdminRenameAgent_OK(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+	p, err := st.CreateProject("p1", "")
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	a, err := st.CreateAgent("old", p.ID, "")
+	if err != nil {
+		t.Fatalf("CreateAgent: %v", err)
+	}
+
+	form := url.Values{"name": {"new"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/agents/"+strconv.Itoa(a.ID)+"/rename",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusFound {
+		t.Fatalf("expected redirect, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+	got, err := st.GetAgent(a.ID)
+	if err != nil {
+		t.Fatalf("GetAgent: %v", err)
+	}
+	if got.Name != "new" {
+		t.Errorf("expected name 'new', got %q", got.Name)
+	}
+}
+
+func TestAdminDeleteAgent_OK(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+	p, err := st.CreateProject("p1", "")
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	a, err := st.CreateAgent("doomed", p.ID, "")
+	if err != nil {
+		t.Fatalf("CreateAgent: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/agents/"+strconv.Itoa(a.ID)+"/delete", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusFound {
+		t.Fatalf("expected redirect, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+	if got, err := st.GetAgent(a.ID); err == nil {
+		t.Errorf("expected agent gone, got %+v", got)
+	}
+}
+
 func TestAdminDanger_Renders(t *testing.T) {
 	mux := setupTestMux(t)
 	rec := httptest.NewRecorder()
