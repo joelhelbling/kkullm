@@ -502,6 +502,26 @@ body::before {
   transform: rotate(-15deg);
 }
 
+/* ===== Admin nav: back-to-board link ===== */
+.admin-back {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.admin-back:hover {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+
 /* ===== Nav hamburger menu ===== */
 .nav-menu {
   position: relative;
