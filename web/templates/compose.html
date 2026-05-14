@@ -1,0 +1,207 @@
+{{define "compose"}}
+<div class="compose-overlay"
+     :class="{ open: composeOpen }"
+     @click.self="closeCompose()"
+     x-show="composeOpen"
+     x-cloak
+     x-transition.opacity>
+  <div class="compose-modal"
+       @keydown.escape.window="closeCompose()"
+       x-show="composeOpen"
+       x-transition:enter="compose-enter"
+       x-transition:enter-start="compose-enter-start"
+       x-transition:enter-end="compose-enter-end">
+
+    <header class="compose-header">
+      <div class="compose-eyebrow">
+        <span class="korean">새</span>
+        <span>compose</span>
+      </div>
+      <h2 class="compose-title">
+        <template x-if="composeMode === null">
+          <span>What shall we <em>draw</em> into being?</span>
+        </template>
+        <template x-if="composeMode === 'card'">
+          <span>New <em>card</em></span>
+        </template>
+        <template x-if="composeMode === 'agent'">
+          <span>New <em>agent</em></span>
+        </template>
+        <template x-if="composeMode === 'project'">
+          <span>New <em>project</em></span>
+        </template>
+      </h2>
+      <button class="compose-close" @click="closeCompose()" aria-label="Close compose">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 4l12 12M16 4L4 16" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+    </header>
+
+    <!-- Picker view -->
+    <div class="compose-picker" x-show="composeMode === null" x-transition.opacity>
+      <button class="compose-choice" @click="setComposeMode('card')">
+        <div class="compose-choice-num">01</div>
+        <div class="compose-choice-body">
+          <div class="compose-choice-title">Card</div>
+          <div class="compose-choice-meta">a unit of work — title, body, status, assignees, tags</div>
+        </div>
+        <div class="compose-choice-arrow">→</div>
+      </button>
+      <button class="compose-choice" @click="setComposeMode('agent')">
+        <div class="compose-choice-num">02</div>
+        <div class="compose-choice-body">
+          <div class="compose-choice-title">Agent</div>
+          <div class="compose-choice-meta">a participant scoped to a project — name, bio, role</div>
+        </div>
+        <div class="compose-choice-arrow">→</div>
+      </button>
+      <button class="compose-choice" @click="setComposeMode('project')">
+        <div class="compose-choice-num">03</div>
+        <div class="compose-choice-body">
+          <div class="compose-choice-title">Project</div>
+          <div class="compose-choice-meta">a board with its own cards and agents</div>
+        </div>
+        <div class="compose-choice-arrow">→</div>
+      </button>
+      <div class="compose-hint">
+        <kbd>n</kbd> to compose · <kbd>esc</kbd> to dismiss
+      </div>
+    </div>
+
+    <!-- Card form -->
+    <form class="compose-form" x-show="composeMode === 'card'" x-transition.opacity
+          @submit.prevent="submitCompose($event, 'card')">
+      <div class="compose-field compose-field-feature">
+        <label for="card-title">Title</label>
+        <input id="card-title" name="title" type="text" required autofocus
+               placeholder="What's pulling at attention?" x-ref="cardTitle">
+      </div>
+
+      <div class="compose-grid">
+        <div class="compose-field">
+          <label for="card-project">Project</label>
+          <select id="card-project" name="project" required>
+            <template x-for="p in projects" :key="p.id">
+              <option :value="p.name" :selected="String(p.id) === String(currentProject)" x-text="p.name"></option>
+            </template>
+          </select>
+        </div>
+        <div class="compose-field">
+          <label for="card-status">Status</label>
+          <select id="card-status" name="status">
+            <option value="considering">considering</option>
+            <option value="todo" selected>todo</option>
+            <option value="in_flight">in flight</option>
+            <option value="blocked">blocked</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="compose-field">
+        <label for="card-body">Body</label>
+        <textarea id="card-body" name="body" rows="5"
+                  placeholder="The reasoning, the constraints, the texture of the work…"></textarea>
+      </div>
+
+      <div class="compose-grid">
+        <div class="compose-field">
+          <label for="card-assignees">Assignees</label>
+          <input id="card-assignees" name="assignees" type="text"
+                 placeholder="comma-separated agent names">
+          <div class="compose-suggest" x-show="agents.length">
+            <template x-for="a in agents.slice(0, 6)" :key="a.id">
+              <button type="button" class="compose-chip"
+                      @click="appendChip('card-assignees', a.name)" x-text="a.name"></button>
+            </template>
+          </div>
+        </div>
+        <div class="compose-field">
+          <label for="card-tags">Tags</label>
+          <input id="card-tags" name="tags" type="text"
+                 placeholder="comma-separated, e.g. bug, urgent">
+          <div class="compose-suggest">
+            <button type="button" class="compose-chip" @click="appendChip('card-tags', 'feature')">feature</button>
+            <button type="button" class="compose-chip" @click="appendChip('card-tags', 'bug')">bug</button>
+            <button type="button" class="compose-chip" @click="appendChip('card-tags', 'enhancement')">enhancement</button>
+            <button type="button" class="compose-chip" @click="appendChip('card-tags', 'urgent')">urgent</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="compose-footer">
+        <button type="button" class="btn-ghost" @click="composeMode = null">← back</button>
+        <div class="compose-actions">
+          <span class="compose-error" x-show="composeError" x-text="composeError"></span>
+          <button type="submit" class="btn-primary" :disabled="composeBusy">
+            <span x-show="!composeBusy">Compose card →</span>
+            <span x-show="composeBusy">…</span>
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Agent form -->
+    <form class="compose-form" x-show="composeMode === 'agent'" x-transition.opacity
+          @submit.prevent="submitCompose($event, 'agent')">
+      <div class="compose-field compose-field-feature">
+        <label for="agent-name">Name</label>
+        <input id="agent-name" name="name" type="text" required autofocus
+               placeholder="e.g. archivist, reviewer, planner" x-ref="agentName">
+      </div>
+
+      <div class="compose-field">
+        <label for="agent-project">Project</label>
+        <select id="agent-project" name="project" required>
+          <template x-for="p in projects" :key="p.id">
+            <option :value="p.name" :selected="String(p.id) === String(currentProject)" x-text="p.name"></option>
+          </template>
+        </select>
+      </div>
+
+      <div class="compose-field">
+        <label for="agent-bio">Bio</label>
+        <textarea id="agent-bio" name="bio" rows="5"
+                  placeholder="Role, responsibilities, capabilities…"></textarea>
+      </div>
+
+      <div class="compose-footer">
+        <button type="button" class="btn-ghost" @click="composeMode = null">← back</button>
+        <div class="compose-actions">
+          <span class="compose-error" x-show="composeError" x-text="composeError"></span>
+          <button type="submit" class="btn-primary" :disabled="composeBusy">
+            <span x-show="!composeBusy">Compose agent →</span>
+            <span x-show="composeBusy">…</span>
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Project form -->
+    <form class="compose-form" x-show="composeMode === 'project'" x-transition.opacity
+          @submit.prevent="submitCompose($event, 'project')">
+      <div class="compose-field compose-field-feature">
+        <label for="project-name">Name</label>
+        <input id="project-name" name="name" type="text" required autofocus
+               placeholder="e.g. kkullm, ingest, oncall" x-ref="projectName">
+      </div>
+
+      <div class="compose-field">
+        <label for="project-description">Description</label>
+        <textarea id="project-description" name="description" rows="5"
+                  placeholder="What is this project about? Why does it exist?"></textarea>
+      </div>
+
+      <div class="compose-footer">
+        <button type="button" class="btn-ghost" @click="composeMode = null">← back</button>
+        <div class="compose-actions">
+          <span class="compose-error" x-show="composeError" x-text="composeError"></span>
+          <button type="submit" class="btn-primary" :disabled="composeBusy">
+            <span x-show="!composeBusy">Compose project →</span>
+            <span x-show="composeBusy">…</span>
+          </button>
+        </div>
+      </div>
+    </form>
+
+  </div>
+</div>
+{{end}}

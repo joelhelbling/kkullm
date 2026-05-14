@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -112,6 +113,7 @@ type layoutData struct {
 	Projects         []model.Project
 	Agents           []model.Agent
 	DefaultProjectID int
+	BootData         template.JS
 }
 
 type cardView struct {
@@ -174,11 +176,35 @@ func (ws *WebServer) handleRoot(w http.ResponseWriter, r *http.Request) {
 		defaultProjectID = projects[0].ID
 	}
 
+	type bootProject struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+	type bootAgent struct {
+		ID      int    `json:"id"`
+		Name    string `json:"name"`
+		Project string `json:"project"`
+	}
+	type bootPayload struct {
+		Projects         []bootProject `json:"projects"`
+		Agents           []bootAgent   `json:"agents"`
+		DefaultProjectID int           `json:"defaultProjectId"`
+	}
+	payload := bootPayload{DefaultProjectID: defaultProjectID}
+	for _, p := range projects {
+		payload.Projects = append(payload.Projects, bootProject{ID: p.ID, Name: p.Name})
+	}
+	for _, a := range agents {
+		payload.Agents = append(payload.Agents, bootAgent{ID: a.ID, Name: a.Name, Project: a.Project})
+	}
+	bootJSON, _ := json.Marshal(payload)
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "layout.html", layoutData{
 		Projects:         projects,
 		Agents:           agents,
 		DefaultProjectID: defaultProjectID,
+		BootData:         template.JS(bootJSON),
 	}); err != nil {
 		log.Printf("render layout: %v", err)
 	}

@@ -2,17 +2,27 @@
 
 function kkullm() {
   return {
-    // State
+    // === State ===
     viewMode: 'project',
     currentProject: null,
     currentAgent: null,
+    projects: [],
+    agents: [],
     drawerOpen: false,
     drawerCardId: null,
     blockersOpen: false,
     blockerCount: 0,
     theme: 'light',
+    boardLoaded: false,
+
+    // Compose modal
+    composeOpen: false,
+    composeMode: null, // null | 'card' | 'agent' | 'project'
+    composeError: '',
+    composeBusy: false,
 
     init() {
+      this.bootstrapData();
       this.initTheme();
       this.connectSSE();
 
@@ -20,6 +30,7 @@ function kkullm() {
       // so our DOM edits won't be overwritten by htmx's attribute merging.
       document.body.addEventListener('htmx:afterSettle', (e) => {
         if (e.detail.target.id === 'board-container') {
+          this.boardLoaded = true;
           this.$nextTick(() => this.initSortable());
           this.updateBlockerCount();
           this.syncBlockedColumnVisibility();
@@ -35,15 +46,43 @@ function kkullm() {
           this.updateBlockerCount();
         }
       });
+    },
 
-      // Read initial project from the board container's hx-get
-      const boardContainer = document.getElementById('board-container');
-      if (boardContainer) {
-        const hxGet = boardContainer.getAttribute('hx-get');
-        if (hxGet) {
-          const match = hxGet.match(/project=(\d+)/);
-          if (match) this.currentProject = match[1];
+    bootstrapData() {
+      const el = document.getElementById('boot-data');
+      if (!el) return;
+      try {
+        const data = JSON.parse(el.textContent);
+        this.projects = data.projects || [];
+        this.agents = data.agents || [];
+        if (data.defaultProjectId) {
+          this.currentProject = String(data.defaultProjectId);
         }
+        if (this.agents.length > 0) {
+          this.currentAgent = String(this.agents[0].id);
+        }
+      } catch (e) {
+        console.warn('boot-data parse failed', e);
+      }
+    },
+
+    // === Keyboard ===
+
+    handleKeydown(e) {
+      const tag = (e.target.tagName || '').toLowerCase();
+      const inField = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+
+      if (e.key === 'Escape') {
+        if (this.composeOpen) { this.closeCompose(); return; }
+        if (this.drawerOpen) { this.closeDrawer(); return; }
+        return;
+      }
+
+      if (inField) return;
+
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        this.openCompose();
       }
     },
 
@@ -107,6 +146,132 @@ function kkullm() {
     closeDrawer() {
       this.drawerOpen = false;
       this.drawerCardId = null;
+    },
+
+    // === Compose Modal ===
+
+    openCompose(mode) {
+      this.composeMode = mode || null;
+      this.composeError = '';
+      this.composeBusy = false;
+      this.composeOpen = true;
+      // Focus the first input after Alpine renders the form
+      this.$nextTick(() => {
+        const input = document.querySelector('.compose-modal input:not([type=radio]):not([type=checkbox]), .compose-modal textarea');
+        if (input && input.autofocus) input.focus();
+      });
+    },
+
+    closeCompose() {
+      this.composeOpen = false;
+      this.composeMode = null;
+      this.composeError = '';
+      this.composeBusy = false;
+    },
+
+    setComposeMode(mode) {
+      this.composeMode = mode;
+      this.composeError = '';
+      this.$nextTick(() => {
+        const input = document.querySelector('.compose-modal input[autofocus]');
+        if (input) input.focus();
+      });
+    },
+
+    appendChip(inputId, value) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const current = (input.value || '').trim();
+      const parts = current ? current.split(',').map(s => s.trim()).filter(Boolean) : [];
+      if (!parts.includes(value)) {
+        parts.push(value);
+        input.value = parts.join(', ');
+      }
+      input.focus();
+    },
+
+    async submitCompose(evt, type) {
+      this.composeError = '';
+      this.composeBusy = true;
+      const form = evt.target;
+      const fd = new FormData(form);
+
+      try {
+        if (type === 'project') {
+          const body = {
+            name: (fd.get('name') || '').toString().trim(),
+            description: (fd.get('description') || '').toString().trim(),
+          };
+          const resp = await this.postJSON('/api/projects', body);
+          const project = await resp.json();
+          if (!resp.ok) throw new Error(project.error || 'Could not create project.');
+          // Add locally so the nav updates immediately
+          if (!this.projects.find(p => p.id === project.id)) {
+            this.projects.push({ id: project.id, name: project.name });
+            this.projects.sort((a, b) => a.name.localeCompare(b.name));
+          }
+          this.currentProject = String(project.id);
+          this.viewMode = 'project';
+          this.showToast('Project "' + project.name + '" created.');
+          this.closeCompose();
+          this.loadBoard();
+          return;
+        }
+
+        if (type === 'agent') {
+          const body = {
+            name: (fd.get('name') || '').toString().trim(),
+            project: (fd.get('project') || '').toString(),
+            bio: (fd.get('bio') || '').toString().trim(),
+          };
+          const resp = await this.postJSON('/api/agents', body);
+          const agent = await resp.json();
+          if (!resp.ok) throw new Error(agent.error || 'Could not create agent.');
+          if (!this.agents.find(a => a.id === agent.id)) {
+            this.agents.push({ id: agent.id, name: agent.name, project: agent.project });
+            this.agents.sort((a, b) => a.name.localeCompare(b.name));
+          }
+          this.showToast('Agent "' + agent.name + '" created.');
+          this.closeCompose();
+          return;
+        }
+
+        if (type === 'card') {
+          const assignees = (fd.get('assignees') || '').toString()
+            .split(',').map(s => s.trim()).filter(Boolean);
+          const tags = (fd.get('tags') || '').toString()
+            .split(',').map(s => s.trim()).filter(Boolean);
+          const body = {
+            title: (fd.get('title') || '').toString().trim(),
+            body: (fd.get('body') || '').toString().trim(),
+            status: (fd.get('status') || 'todo').toString(),
+            project: (fd.get('project') || '').toString(),
+            assignees,
+            tags,
+          };
+          const resp = await this.postJSON('/api/cards', body);
+          const card = await resp.json();
+          if (!resp.ok) throw new Error(card.error || 'Could not create card.');
+          this.showToast('Card #' + card.id + ' "' + card.title + '" created.');
+          this.closeCompose();
+          // The card_created SSE event will trigger handleCardCreated,
+          // but to be safe (and instant), reload the board here too.
+          this.loadBoard();
+          return;
+        }
+      } catch (err) {
+        this.composeError = err.message || 'Something went wrong.';
+      } finally {
+        this.composeBusy = false;
+      }
+    },
+
+    postJSON(url, body) {
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
     },
 
     // === Blockers ===
@@ -181,7 +346,7 @@ function kkullm() {
       }).then((resp) => {
         if (!resp.ok) {
           evt.from.appendChild(cardEl);
-          resp.text().then((msg) => this.showToast(msg));
+          resp.text().then((msg) => this.showToast(msg, 'error'));
         } else {
           resp.text().then((html) => {
             // Replace the card tile with the server-rendered HTML, then
@@ -262,8 +427,6 @@ function kkullm() {
 
       // Transitions involving the blocked column can't use FLIP
       // because the blocked column's position changes when it opens.
-      // Update blocker state then reload the board — afterSwap will
-      // call syncBlockedColumnVisibility() with the fresh DOM.
       if (card.status === 'blocked' || oldStatus === 'blocked') {
         if (card.status === 'blocked') {
           this.blockerCount++;
@@ -363,13 +526,20 @@ function kkullm() {
 
     // === Toast ===
 
-    showToast(message) {
+    showToast(message, variant) {
       const container = document.getElementById('toast-container');
+      if (!container) return;
       const toast = document.createElement('div');
-      toast.className = 'toast';
-      toast.textContent = message;
+      toast.className = 'toast' + (variant === 'error' ? ' toast-error' : '');
+      const text = document.createElement('span');
+      text.textContent = message;
+      toast.appendChild(text);
       container.appendChild(toast);
-      setTimeout(() => toast.remove(), 4000);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.25s';
+        setTimeout(() => toast.remove(), 260);
+      }, 3600);
     },
   };
 }
