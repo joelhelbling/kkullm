@@ -423,6 +423,35 @@ function kkullm() {
         this.handleCommentCreated(event.data);
       });
 
+      source.addEventListener('project_renamed', (e) => {
+        // Project/agent lists are server-rendered into the layout;
+        // a soft refresh of the board is the best we can do without
+        // a dedicated loader. Selector labels will catch up on next
+        // full page load.
+        this.loadBoard();
+      });
+
+      source.addEventListener('project_deleted', (e) => {
+        const event = JSON.parse(e.data);
+        if (event.data && String(this.currentProject) === String(event.data.id)) {
+          this.currentProject = '';
+        }
+        this.loadBoard();
+      });
+
+      source.addEventListener('agent_renamed', (e) => {
+        this.loadBoard();
+      });
+
+      source.addEventListener('agent_deleted', (e) => {
+        this.loadBoard();
+      });
+
+      source.addEventListener('dataset_reset', (e) => {
+        alert('Database was purged. Reloading…');
+        setTimeout(() => location.reload(), 1000);
+      });
+
       source.onerror = () => {
         // EventSource auto-reconnects; no action needed
       };

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/joelhelbling/kkullm/api"
 	"github.com/joelhelbling/kkullm/model"
 )
 
@@ -90,6 +91,7 @@ func (ws *WebServer) handleAdminRenameProject(w http.ResponseWriter, r *http.Req
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	ws.broadcastProjectRenamed(id, name)
 	http.Redirect(w, r, "/admin/projects", http.StatusSeeOther)
 }
 
@@ -122,6 +124,7 @@ func (ws *WebServer) handleAdminDeleteProject(w http.ResponseWriter, r *http.Req
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	ws.broadcastProjectDeleted(id)
 	http.Redirect(w, r, "/admin/projects", http.StatusSeeOther)
 }
 
@@ -140,6 +143,7 @@ func (ws *WebServer) handleAdminRenameAgent(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	ws.broadcastAgentRenamed(id, name)
 	http.Redirect(w, r, "/admin/agents", http.StatusSeeOther)
 }
 
@@ -158,6 +162,7 @@ func (ws *WebServer) handleAdminDeleteAgent(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	ws.broadcastAgentDeleted(id)
 	http.Redirect(w, r, "/admin/agents", http.StatusSeeOther)
 }
 
@@ -185,6 +190,22 @@ func (ws *WebServer) handleAdminPurge(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-// broadcastDatasetReset is filled in by Task 16 (SSE). Stub now so this
-// task can wire in the call site.
-func (ws *WebServer) broadcastDatasetReset() {}
+func (ws *WebServer) broadcastDatasetReset() {
+	ws.events.Publish(api.Event{Type: "dataset_reset"})
+}
+
+func (ws *WebServer) broadcastProjectRenamed(id int, name string) {
+	ws.events.Publish(api.Event{Type: "project_renamed", Data: map[string]any{"id": id, "name": name}})
+}
+
+func (ws *WebServer) broadcastProjectDeleted(id int) {
+	ws.events.Publish(api.Event{Type: "project_deleted", Data: map[string]int{"id": id}})
+}
+
+func (ws *WebServer) broadcastAgentRenamed(id int, name string) {
+	ws.events.Publish(api.Event{Type: "agent_renamed", Data: map[string]any{"id": id, "name": name}})
+}
+
+func (ws *WebServer) broadcastAgentDeleted(id int) {
+	ws.events.Publish(api.Event{Type: "agent_deleted", Data: map[string]int{"id": id}})
+}

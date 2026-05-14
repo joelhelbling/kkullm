@@ -7,6 +7,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/joelhelbling/kkullm/api"
 )
 
 func TestAdminRoot_RedirectsToProjects(t *testing.T) {
@@ -241,6 +244,114 @@ func TestAdminPurge_AcceptsExactPhrase(t *testing.T) {
 		if p.Name == "alpha" {
 			t.Errorf("expected 'alpha' project to be gone after purge, found %+v", p)
 		}
+	}
+}
+
+func TestBroadcastDatasetReset_PublishesEvent(t *testing.T) {
+	bus := api.NewEventBus()
+	ws := &WebServer{events: bus}
+	ch := bus.Subscribe()
+	defer bus.Unsubscribe(ch)
+
+	ws.broadcastDatasetReset()
+
+	select {
+	case ev := <-ch:
+		if ev.Type != "dataset_reset" {
+			t.Errorf("expected type 'dataset_reset', got %q", ev.Type)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for dataset_reset event")
+	}
+}
+
+func TestBroadcastProjectRenamed_PublishesEvent(t *testing.T) {
+	bus := api.NewEventBus()
+	ws := &WebServer{events: bus}
+	ch := bus.Subscribe()
+	defer bus.Unsubscribe(ch)
+
+	ws.broadcastProjectRenamed(7, "alpha")
+
+	select {
+	case ev := <-ch:
+		if ev.Type != "project_renamed" {
+			t.Errorf("expected type 'project_renamed', got %q", ev.Type)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for project_renamed event")
+	}
+}
+
+func TestBroadcastProjectDeleted_PublishesEvent(t *testing.T) {
+	bus := api.NewEventBus()
+	ws := &WebServer{events: bus}
+	ch := bus.Subscribe()
+	defer bus.Unsubscribe(ch)
+
+	ws.broadcastProjectDeleted(9)
+
+	select {
+	case ev := <-ch:
+		if ev.Type != "project_deleted" {
+			t.Errorf("expected type 'project_deleted', got %q", ev.Type)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for project_deleted event")
+	}
+}
+
+func TestBroadcastAgentRenamed_PublishesEvent(t *testing.T) {
+	bus := api.NewEventBus()
+	ws := &WebServer{events: bus}
+	ch := bus.Subscribe()
+	defer bus.Unsubscribe(ch)
+
+	ws.broadcastAgentRenamed(3, "rosie")
+
+	select {
+	case ev := <-ch:
+		if ev.Type != "agent_renamed" {
+			t.Errorf("expected type 'agent_renamed', got %q", ev.Type)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for agent_renamed event")
+	}
+}
+
+func TestBroadcastAgentDeleted_PublishesEvent(t *testing.T) {
+	bus := api.NewEventBus()
+	ws := &WebServer{events: bus}
+	ch := bus.Subscribe()
+	defer bus.Unsubscribe(ch)
+
+	ws.broadcastAgentDeleted(11)
+
+	select {
+	case ev := <-ch:
+		if ev.Type != "agent_deleted" {
+			t.Errorf("expected type 'agent_deleted', got %q", ev.Type)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for agent_deleted event")
+	}
+}
+
+func TestBroadcastCardDeleted_PublishesEvent(t *testing.T) {
+	bus := api.NewEventBus()
+	ws := &WebServer{events: bus}
+	ch := bus.Subscribe()
+	defer bus.Unsubscribe(ch)
+
+	ws.broadcastCardDeleted(42)
+
+	select {
+	case ev := <-ch:
+		if ev.Type != "card_deleted" {
+			t.Errorf("expected type 'card_deleted', got %q", ev.Type)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for card_deleted event")
 	}
 }
 
