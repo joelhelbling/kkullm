@@ -513,8 +513,9 @@ func (ws *WebServer) handleDeleteCard(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-// broadcastCardDeleted is filled in by Task 16. Stub now so this task can wire in the call site.
-func (ws *WebServer) broadcastCardDeleted(id int) {}
+func (ws *WebServer) broadcastCardDeleted(id int) {
+	ws.events.Publish(api.Event{Type: "card_deleted", Data: map[string]int{"id": id}})
+}
 
 func (ws *WebServer) handleBlockers(w http.ResponseWriter, r *http.Request) {
 	cards, err := ws.store.ListCards(store.CardListParams{
