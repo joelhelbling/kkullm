@@ -502,6 +502,57 @@ body::before {
   transform: rotate(-15deg);
 }
 
+/* ===== Nav hamburger menu ===== */
+.nav-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+/* The hamburger button shouldn't tilt on hover the way the lone theme
+   button did — rotation feels wrong on a "lines" icon. */
+.nav-menu > .icon-btn:hover {
+  transform: none;
+}
+
+.nav-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-primary);
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.nav-menu-item:hover {
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+}
+
 /* ===== Board ===== */
 .board {
   position: relative;
