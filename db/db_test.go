@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"testing"
 )
 
@@ -61,6 +62,35 @@ func TestSeed(t *testing.T) {
 
 	if err := Seed(database); err != nil {
 		t.Fatalf("second Seed call failed: %v", err)
+	}
+}
+
+func TestMigrate_AddsAuthorNameColumnAndNullableAgentID(t *testing.T) {
+	dbConn, _ := Open(":memory:")
+	defer dbConn.Close()
+	if err := Migrate(dbConn); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	rows, err := dbConn.Query("PRAGMA table_info(comments)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	cols := map[string]struct{ notNull int }{}
+	for rows.Next() {
+		var cid, notNull, pk int
+		var name, ctype string
+		var dflt sql.NullString
+		_ = rows.Scan(&cid, &name, &ctype, &notNull, &dflt, &pk)
+		cols[name] = struct{ notNull int }{notNull}
+	}
+	if _, ok := cols["author_name"]; !ok {
+		t.Errorf("expected author_name column")
+	}
+	if cols["agent_id"].notNull != 0 {
+		t.Errorf("expected agent_id to be nullable, got NOT NULL")
 	}
 }
 
