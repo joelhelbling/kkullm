@@ -44,6 +44,14 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	// Blockers column (all blocked cards across all projects)
 	mux.HandleFunc("GET /ui/blockers", ws.handleBlockers)
 
+	// Admin shell + sections (Projects / Agents / Danger Zone).
+	// All admin routes are gated by RequireAdmin so future auth lands
+	// in one place; today it is a pass-through.
+	mux.Handle("GET /admin", RequireAdmin(http.HandlerFunc(ws.handleAdminRoot)))
+	mux.Handle("GET /admin/projects", RequireAdmin(http.HandlerFunc(ws.handleAdminProjects)))
+	mux.Handle("GET /admin/agents", RequireAdmin(http.HandlerFunc(ws.handleAdminAgents)))
+	mux.Handle("GET /admin/danger", RequireAdmin(http.HandlerFunc(ws.handleAdminDanger)))
+
 	// Static files (no-cache during development so edits are visible on reload)
 	staticFS, err := fs.Sub(content, "static")
 	if err != nil {
