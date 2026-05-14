@@ -3,6 +3,8 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -53,6 +55,80 @@ func TestAdminAgents_Renders(t *testing.T) {
 	}
 	if !strings.Contains(body, "user") {
 		t.Errorf("expected body to contain seeded agent name 'user'")
+	}
+}
+
+func TestAdminRenameProject_OK(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+	p, err := st.CreateProject("orig", "")
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+
+	form := url.Values{"name": {"new"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/projects/"+strconv.Itoa(p.ID)+"/rename",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusFound {
+		t.Fatalf("expected redirect, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+	got, err := st.GetProject(p.ID)
+	if err != nil {
+		t.Fatalf("GetProject: %v", err)
+	}
+	if got.Name != "new" {
+		t.Errorf("expected name 'new', got %q", got.Name)
+	}
+}
+
+func TestAdminDeleteProject_RejectsMismatchedConfirm(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+	p, err := st.CreateProject("alpha", "")
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+
+	form := url.Values{"confirm": {"WRONG"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/projects/"+strconv.Itoa(p.ID)+"/delete",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+	got, err := st.GetProject(p.ID)
+	if err != nil {
+		t.Fatalf("expected project to still exist: %v", err)
+	}
+	if got.Name != "alpha" {
+		t.Errorf("expected name 'alpha', got %q", got.Name)
+	}
+}
+
+func TestAdminDeleteProject_AcceptsMatchedConfirm(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+	p, err := st.CreateProject("alpha", "")
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+
+	form := url.Values{"confirm": {"alpha"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/projects/"+strconv.Itoa(p.ID)+"/delete",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusFound {
+		t.Fatalf("expected redirect, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+	if got, err := st.GetProject(p.ID); err == nil {
+		t.Errorf("expected project gone, got %+v", got)
 	}
 }
 
