@@ -123,6 +123,42 @@ func (ws *WebServer) handleAdminDeleteProject(w http.ResponseWriter, r *http.Req
 	http.Redirect(w, r, "/admin/projects", http.StatusSeeOther)
 }
 
+func (ws *WebServer) handleAdminRenameAgent(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	if err := ws.store.RenameAgent(id, name); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Redirect(w, r, "/admin/agents", http.StatusSeeOther)
+}
+
+func (ws *WebServer) handleAdminDeleteAgent(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	if err := ws.store.DeleteAgent(id); err != nil {
+		// Stale id (not found) is an idempotent recovery.
+		if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "not found") {
+			http.Redirect(w, r, "/admin/agents", http.StatusSeeOther)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/admin/agents", http.StatusSeeOther)
+}
+
 func (ws *WebServer) handleAdminDanger(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "admin_danger", adminDangerData{Section: "danger"}); err != nil {
