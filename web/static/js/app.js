@@ -213,6 +213,7 @@ function kkullm() {
           this.currentProject = String(project.id);
           this.viewMode = 'project';
           this.showToast('Project "' + project.name + '" created.');
+          this.resetComposeForm(form);
           this.closeCompose();
           this.loadBoard();
           return;
@@ -232,6 +233,7 @@ function kkullm() {
             this.agents.sort((a, b) => a.name.localeCompare(b.name));
           }
           this.showToast('Agent "' + agent.name + '" created.');
+          this.resetComposeForm(form);
           this.closeCompose();
           return;
         }
@@ -253,6 +255,7 @@ function kkullm() {
           const card = await resp.json();
           if (!resp.ok) throw new Error(card.error || 'Could not create card.');
           this.showToast('Card #' + card.id + ' "' + card.title + '" created.');
+          this.resetComposeForm(form);
           this.closeCompose();
           // The card_created SSE event will trigger handleCardCreated,
           // but to be safe (and instant), reload the board here too.
@@ -263,6 +266,20 @@ function kkullm() {
         this.composeError = err.message || 'Something went wrong.';
       } finally {
         this.composeBusy = false;
+      }
+    },
+
+    resetComposeForm(form) {
+      // Alpine's x-show keeps the form in the DOM, so fields keep their values
+      // across modal close/reopen. Clear them so each compose starts fresh.
+      form.reset();
+      // form.reset() puts the project <select> back to its HTML default, which
+      // is whichever option had `selected` set at render time — not necessarily
+      // the user's current project. Re-seed it.
+      const projectSelect = form.querySelector('[name="project"]');
+      if (projectSelect && this.currentProject) {
+        const cur = this.projects.find(p => String(p.id) === String(this.currentProject));
+        if (cur) projectSelect.value = cur.name;
       }
     },
 
