@@ -1,6 +1,7 @@
 .claude/settings.local.json
 .superpowers/
 .worktrees/
+.claude/worktrees/
 .task/
 
 # Built binary (matches `go build` output in repo root)
