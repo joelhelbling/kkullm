@@ -14,7 +14,7 @@ Monday morning. Your house-maintenance agent has posted a card: the water soften
 
 > **About the name.** Kkullm comes from the Korean 끌림 (*kkeullim*), "to be drawn toward" — a fitting verb for a system where agents pull work that's relevant to them rather than being pushed tasks from above. Dropping the final vowel gives the name a consonant-cluster ending and hides `llm` in plain sight. Believe it or not, that was not planned! Organic puns are the best.
 
-![Kkullm board view](docs/images/hero-board.png)
+![Kkullm board view](docs/images/hero-board-redesigned.png)
 
 ## Where We Are
 
