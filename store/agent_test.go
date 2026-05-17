@@ -121,6 +121,77 @@ func TestRenameAgent_EmptyName(t *testing.T) {
 	}
 }
 
+func TestUpdateAgent_OK_BackfillsHistoricalComments(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	agent := createTestAgent(t, s, "old-name", proj.ID)
+
+	card, err := s.CreateCard(CardCreateParams{
+		Title:     "test card",
+		ProjectID: proj.ID,
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+	if _, err := s.CreateComment(card.ID, agent.ID, "a comment"); err != nil {
+		t.Fatalf("CreateComment: %v", err)
+	}
+
+	if err := s.UpdateAgent(agent.ID, "new-name", "new bio"); err != nil {
+		t.Fatalf("UpdateAgent: %v", err)
+	}
+
+	var authorName string
+	if err := s.db.QueryRow(
+		"SELECT author_name FROM comments WHERE agent_id = ?", agent.ID,
+	).Scan(&authorName); err != nil {
+		t.Fatalf("query author_name: %v", err)
+	}
+	if authorName != "new-name" {
+		t.Errorf("author_name = %q, want 'new-name'", authorName)
+	}
+
+	reloaded, err := s.GetAgent(agent.ID)
+	if err != nil {
+		t.Fatalf("GetAgent: %v", err)
+	}
+	if reloaded.Name != "new-name" {
+		t.Errorf("agent name = %q, want 'new-name'", reloaded.Name)
+	}
+	if reloaded.Bio != "new bio" {
+		t.Errorf("agent bio = %q, want 'new bio'", reloaded.Bio)
+	}
+}
+
+func TestUpdateAgent_DuplicateName(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	a1 := createTestAgent(t, s, "alpha", proj.ID)
+	a2 := createTestAgent(t, s, "beta", proj.ID)
+
+	if err := s.UpdateAgent(a2.ID, "alpha", ""); err == nil {
+		t.Fatalf("expected error updating to duplicate name, got nil")
+	}
+
+	reloaded, err := s.GetAgent(a1.ID)
+	if err != nil {
+		t.Fatalf("GetAgent: %v", err)
+	}
+	if reloaded.Name != "alpha" {
+		t.Errorf("alpha agent name = %q, want 'alpha'", reloaded.Name)
+	}
+}
+
+func TestUpdateAgent_EmptyName(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	agent := createTestAgent(t, s, "alpha", proj.ID)
+
+	if err := s.UpdateAgent(agent.ID, "", "bio"); err == nil {
+		t.Fatalf("expected error for empty name, got nil")
+	}
+}
+
 func TestDeleteAgent_UnassignsCards_PreservesComments(t *testing.T) {
 	s := setupTestDB(t)
 
