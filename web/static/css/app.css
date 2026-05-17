@@ -2014,39 +2014,6 @@ body::before {
   white-space: nowrap;
 }
 
-.inline-rename {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.inline-rename-input {
-  font-family: var(--font-display);
-  font-weight: 420;
-  font-size: 18px;
-  letter-spacing: -0.01em;
-  color: var(--text-primary);
-  background: transparent;
-  border: none;
-  border-bottom: 1px dashed transparent;
-  padding: 4px 2px;
-  outline: none;
-  min-width: 0;
-  width: 100%;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.inline-rename-input:hover {
-  border-bottom-color: var(--border);
-}
-
-.inline-rename-input:focus {
-  border-bottom-style: dashed;
-  border-bottom-color: var(--accent);
-  background: var(--accent-tint);
-}
-
 .btn-small {
   font-family: var(--font-mono);
   font-size: 10.5px;
