@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/joelhelbling/kkullm/client"
@@ -13,6 +13,7 @@ import (
 var cardCmd = &cobra.Command{
 	Use:   "card",
 	Short: "Manage cards",
+	RunE:  rejectUnknownSubcommand,
 }
 
 // --- card list ---
@@ -22,7 +23,6 @@ var (
 	cardListAssignee string
 	cardListTag      string
 	cardListFormat   string
-	cardListJSON     bool
 	cardListArchived bool
 )
 
@@ -34,6 +34,15 @@ var cardListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List cards",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := validateFormat(cardListFormat); err != nil {
+			return err
+		}
+		if cardListStatus != "" {
+			if err := validateStatus(cardListStatus); err != nil {
+				return err
+			}
+		}
+
 		c := client.New(serverURL)
 		opts := client.CardListOptions{
 			Project:      projectName,
@@ -50,27 +59,16 @@ var cardListCmd = &cobra.Command{
 			return err
 		}
 
-		if cardListJSON {
-			data, err := json.MarshalIndent(cards, "", "  ")
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(data))
-			return nil
-		}
-
-		if cardListFormat == "full" {
-			for i, card := range cards {
-				if i > 0 {
+		first := true
+		return emitList(cards, func(card model.Card) {
+			if cardListFormat == "full" {
+				if !first {
 					fmt.Println("---")
 				}
+				first = false
 				printCardFull(&card)
+				return
 			}
-			return nil
-		}
-
-		// brief format
-		for _, card := range cards {
 			tags := ""
 			if len(card.Tags) > 0 {
 				tags = " [" + strings.Join(card.Tags, ", ") + "]"
@@ -80,15 +78,14 @@ var cardListCmd = &cobra.Command{
 				assignee = strings.Join(card.Assignees, ",")
 			}
 			fmt.Printf("#%-5d %-12s %-12s %s%s\n", card.ID, card.Status, assignee, card.Title, tags)
-		}
-		return nil
+		})
 	},
 }
 
-// --- card show ---
+// --- card get ---
 
-var cardShowCmd = &cobra.Command{
-	Use:   "show <id>",
+var cardGetCmd = &cobra.Command{
+	Use:   "get <id>",
 	Short: "Show card details",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -100,6 +97,9 @@ var cardShowCmd = &cobra.Command{
 		card, err := c.GetCard(id)
 		if err != nil {
 			return err
+		}
+		if jsonOutput {
+			return emitJSON(card)
 		}
 		printCardFull(card)
 		return nil
@@ -128,6 +128,9 @@ var cardCreateCmd = &cobra.Command{
 		if project == "" {
 			return fmt.Errorf("project is required: use --project flag or set KKULLM_PROJECT")
 		}
+		if err := validateStatus(cardCreateStatus); err != nil {
+			return err
+		}
 
 		req := client.CardCreateRequest{
 			Title:   cardCreateTitle,
@@ -143,13 +146,16 @@ var cardCreateCmd = &cobra.Command{
 		}
 		req.Relations = buildRelations(cardCreateBlockedBy, cardCreateBelongsTo, cardCreateInterestedIn)
 
+		if dryRun {
+			return emitDryRun(fmt.Sprintf("would create card %q in project %q", req.Title, project), req)
+		}
+
 		c := client.New(serverURL)
 		card, err := c.CreateCard(req)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Created card #%d: %s\n", card.ID, card.Title)
-		return nil
+		return emitResult(fmt.Sprintf("Created card #%d: %s", card.ID, card.Title), card)
 	},
 }
 
@@ -186,6 +192,9 @@ var cardUpdateCmd = &cobra.Command{
 			req.Body = &cardUpdateBody
 		}
 		if cmd.Flags().Changed("status") {
+			if err := validateStatus(cardUpdateStatus); err != nil {
+				return err
+			}
 			req.Status = &cardUpdateStatus
 		}
 		if cmd.Flags().Changed("assignee") {
@@ -200,13 +209,16 @@ var cardUpdateCmd = &cobra.Command{
 			req.Relations = relations
 		}
 
+		if dryRun {
+			return emitDryRun(fmt.Sprintf("would update card #%d", id), req)
+		}
+
 		c := client.New(serverURL)
 		card, err := c.UpdateCard(id, req)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Updated card #%d: %s\n", card.ID, card.Title)
-		return nil
+		return emitResult(fmt.Sprintf("Updated card #%d: %s", card.ID, card.Title), card)
 	},
 }
 
@@ -254,11 +266,10 @@ func buildRelations(blockedBy, belongsTo, interestedIn []int) []model.CardRelati
 
 func parseID(s string) (int, error) {
 	// Strip leading # if present
-	s = strings.TrimPrefix(s, "#")
-	var id int
-	_, err := fmt.Sscanf(s, "%d", &id)
-	if err != nil {
-		return 0, fmt.Errorf("invalid id: %s", s)
+	trimmed := strings.TrimPrefix(s, "#")
+	id, err := strconv.Atoi(trimmed)
+	if err != nil || id < 1 {
+		return 0, fmt.Errorf("invalid id %q: expected a positive integer (e.g. 42 or #42)", s)
 	}
 	return id, nil
 }
@@ -268,8 +279,7 @@ func init() {
 	cardListCmd.Flags().StringVar(&cardListStatus, "status", "", "Filter by status")
 	cardListCmd.Flags().StringVar(&cardListAssignee, "assignee", "", "Filter by assignee")
 	cardListCmd.Flags().StringVar(&cardListTag, "tag", "", "Filter by tag")
-	cardListCmd.Flags().StringVar(&cardListFormat, "format", "brief", "Output format: brief or full")
-	cardListCmd.Flags().BoolVar(&cardListJSON, "json", false, "Output as JSON")
+	cardListCmd.Flags().StringVar(&cardListFormat, "format", "brief", "Output verbosity: brief or full")
 	cardListCmd.Flags().BoolVar(&cardListArchived, "archived", false, "Show archived completed/tabled cards instead of the active set")
 
 	// card create flags
@@ -294,7 +304,7 @@ func init() {
 	cardUpdateCmd.Flags().IntSliceVar(&cardUpdateInterestedIn, "interested-in", nil, "Interested in card ID (repeatable)")
 
 	cardCmd.AddCommand(cardListCmd)
-	cardCmd.AddCommand(cardShowCmd)
+	cardCmd.AddCommand(cardGetCmd)
 	cardCmd.AddCommand(cardCreateCmd)
 	cardCmd.AddCommand(cardUpdateCmd)
 	rootCmd.AddCommand(cardCmd)

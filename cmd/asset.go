@@ -4,12 +4,14 @@ import (
 	"fmt"
 
 	"github.com/joelhelbling/kkullm/client"
+	"github.com/joelhelbling/kkullm/model"
 	"github.com/spf13/cobra"
 )
 
 var assetCmd = &cobra.Command{
 	Use:   "asset",
 	Short: "Manage project assets",
+	RunE:  rejectUnknownSubcommand,
 }
 
 var (
@@ -26,14 +28,13 @@ var assetListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		for _, a := range assets {
+		return emitList(assets, func(a model.ProjectAsset) {
 			url := a.URL
 			if url == "" {
 				url = "(no url)"
 			}
 			fmt.Printf("%s [%s] %s\n", a.Name, a.Project, url)
-		}
-		return nil
+		})
 	},
 }
 
@@ -51,18 +52,26 @@ var assetCreateCmd = &cobra.Command{
 		if project == "" {
 			return fmt.Errorf("project is required: use --project flag or set KKULLM_PROJECT")
 		}
+		if dryRun {
+			req := map[string]string{
+				"project":     project,
+				"name":        assetCreateName,
+				"description": assetCreateDesc,
+				"url":         assetCreateURL,
+			}
+			return emitDryRun(fmt.Sprintf("would create asset %q in project %q", assetCreateName, project), req)
+		}
 		c := client.New(serverURL)
 		asset, err := c.CreateAsset(project, assetCreateName, assetCreateDesc, assetCreateURL)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Created asset: %s (id=%d)\n", asset.Name, asset.ID)
-		return nil
+		return emitResult(fmt.Sprintf("Created asset: %s (id=%d)", asset.Name, asset.ID), asset)
 	},
 }
 
-var assetShowCmd = &cobra.Command{
-	Use:   "show <id>",
+var assetGetCmd = &cobra.Command{
+	Use:   "get <id>",
 	Short: "Show asset details",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -74,6 +83,9 @@ var assetShowCmd = &cobra.Command{
 		asset, err := c.GetAsset(id)
 		if err != nil {
 			return err
+		}
+		if jsonOutput {
+			return emitJSON(asset)
 		}
 		fmt.Printf("ID:          %d\n", asset.ID)
 		fmt.Printf("Name:        %s\n", asset.Name)
@@ -101,6 +113,6 @@ func init() {
 
 	assetCmd.AddCommand(assetListCmd)
 	assetCmd.AddCommand(assetCreateCmd)
-	assetCmd.AddCommand(assetShowCmd)
+	assetCmd.AddCommand(assetGetCmd)
 	rootCmd.AddCommand(assetCmd)
 }

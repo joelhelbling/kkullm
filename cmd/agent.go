@@ -4,12 +4,14 @@ import (
 	"fmt"
 
 	"github.com/joelhelbling/kkullm/client"
+	"github.com/joelhelbling/kkullm/model"
 	"github.com/spf13/cobra"
 )
 
 var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: "Manage agents",
+	RunE:  rejectUnknownSubcommand,
 }
 
 var agentListCmd = &cobra.Command{
@@ -21,14 +23,13 @@ var agentListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		for _, a := range agents {
+		return emitList(agents, func(a model.Agent) {
 			bio := a.Bio
 			if bio == "" {
 				bio = "(no bio)"
 			}
 			fmt.Printf("%s [%s] — %s\n", a.Name, a.Project, bio)
-		}
-		return nil
+		})
 	},
 }
 
@@ -49,18 +50,21 @@ var agentCreateCmd = &cobra.Command{
 		if project == "" {
 			return fmt.Errorf("project is required: use --project flag or set KKULLM_PROJECT")
 		}
+		if dryRun {
+			req := map[string]string{"name": agentCreateName, "project": project, "bio": agentCreateBio}
+			return emitDryRun(fmt.Sprintf("would create agent %q in project %q", agentCreateName, project), req)
+		}
 		c := client.New(serverURL)
 		agent, err := c.CreateAgent(agentCreateName, project, agentCreateBio)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Created agent: %s (id=%d)\n", agent.Name, agent.ID)
-		return nil
+		return emitResult(fmt.Sprintf("Created agent: %s (id=%d)", agent.Name, agent.ID), agent)
 	},
 }
 
-var agentShowCmd = &cobra.Command{
-	Use:   "show <name>",
+var agentGetCmd = &cobra.Command{
+	Use:   "get <name>",
 	Short: "Show agent details by name",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -72,6 +76,9 @@ var agentShowCmd = &cobra.Command{
 		}
 		for _, a := range agents {
 			if a.Name == name {
+				if jsonOutput {
+					return emitJSON(a)
+				}
 				fmt.Printf("ID:      %d\n", a.ID)
 				fmt.Printf("Name:    %s\n", a.Name)
 				fmt.Printf("Project: %s\n", a.Project)
@@ -92,6 +99,6 @@ func init() {
 
 	agentCmd.AddCommand(agentListCmd)
 	agentCmd.AddCommand(agentCreateCmd)
-	agentCmd.AddCommand(agentShowCmd)
+	agentCmd.AddCommand(agentGetCmd)
 	rootCmd.AddCommand(agentCmd)
 }

@@ -4,12 +4,14 @@ import (
 	"fmt"
 
 	"github.com/joelhelbling/kkullm/client"
+	"github.com/joelhelbling/kkullm/model"
 	"github.com/spf13/cobra"
 )
 
 var commentCmd = &cobra.Command{
 	Use:   "comment",
 	Short: "Manage card comments",
+	RunE:  rejectUnknownSubcommand,
 }
 
 var commentListCmd = &cobra.Command{
@@ -26,17 +28,16 @@ var commentListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		for _, comment := range comments {
+		return emitList(comments, func(comment model.Comment) {
 			fmt.Printf("[%s] %s: %s\n", comment.CreatedAt.Format("2006-01-02 15:04:05"), comment.Agent, comment.Body)
-		}
-		return nil
+		})
 	},
 }
 
-var commentAddBody string
+var commentCreateBody string
 
-var commentAddCmd = &cobra.Command{
-	Use:   "add <card-id>",
+var commentCreateCmd = &cobra.Command{
+	Use:   "create <card-id>",
 	Short: "Add a comment to a card",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -45,21 +46,24 @@ var commentAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if dryRun {
+			req := map[string]any{"card_id": cardID, "agent": agent, "body": commentCreateBody}
+			return emitDryRun(fmt.Sprintf("would add comment to card #%d as %q", cardID, agent), req)
+		}
 		c := client.New(serverURL)
-		comment, err := c.CreateComment(cardID, agent, commentAddBody)
+		comment, err := c.CreateComment(cardID, agent, commentCreateBody)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Added comment #%d to card #%d\n", comment.ID, comment.CardID)
-		return nil
+		return emitResult(fmt.Sprintf("Added comment #%d to card #%d", comment.ID, comment.CardID), comment)
 	},
 }
 
 func init() {
-	commentAddCmd.Flags().StringVar(&commentAddBody, "body", "", "Comment body (required)")
-	commentAddCmd.MarkFlagRequired("body")
+	commentCreateCmd.Flags().StringVar(&commentCreateBody, "body", "", "Comment body (required)")
+	commentCreateCmd.MarkFlagRequired("body")
 
 	commentCmd.AddCommand(commentListCmd)
-	commentCmd.AddCommand(commentAddCmd)
+	commentCmd.AddCommand(commentCreateCmd)
 	rootCmd.AddCommand(commentCmd)
 }

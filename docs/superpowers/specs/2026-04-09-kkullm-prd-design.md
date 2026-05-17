@@ -183,7 +183,7 @@ kkullm serve                              # start the server
 
 # Cards
 kkullm card list [--status X] [--assignee X] [--tag X] [--format brief|full]
-kkullm card show <id>
+kkullm card get <id>
 kkullm card create --title "..." [--body "..."] [--status considering|todo]
                    [--assignee X] [--tag X]
                    [--blocked-by <id>] [--belongs-to <id>] [--interested-in <id>]
@@ -193,7 +193,7 @@ kkullm card update <id> [--status X] [--assignee X] [--title "..."] [--body "...
 
 # Comments
 kkullm comment list <card-id>
-kkullm comment add <card-id> --body "..."
+kkullm comment create <card-id> --body "..."
 
 # Projects
 kkullm project list
@@ -202,12 +202,12 @@ kkullm project create --name "..." [--description "..."]
 # Agents
 kkullm agent list [--project X]
 kkullm agent create --name "..." --project X [--bio "..."]
-kkullm agent show <id>
+kkullm agent get <name>
 
 # Assets
 kkullm asset list [--name "<glob>"] [--url "<glob>"]
 kkullm asset create --name "..." [--description "..."] [--url "..."]
-kkullm asset show <id>
+kkullm asset get <id>
 ```
 
 ### Output format
