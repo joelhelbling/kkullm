@@ -2507,3 +2507,34 @@ body::before {
 }
 .picker-row-check { color: var(--accent); font-size: 18px; }
 .picker-empty { padding: 24px 18px; color: var(--text-tertiary); }
+
+/* ===== Overflow menu sheet ===== */
+.overflow-sheet { max-height: 60vh; }
+.overflow-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0 12px;
+}
+.overflow-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 48px;
+  padding: 0 18px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--text-primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+.overflow-row:hover { background: var(--bg-card-hover); }
+.overflow-row-icon { font-size: 18px; width: 22px; text-align: center; }
+.overflow-divider {
+  height: 1px;
+  margin: 6px 18px;
+  background: var(--hairline);
+}

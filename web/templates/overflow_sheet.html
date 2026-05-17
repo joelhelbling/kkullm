@@ -1,0 +1,42 @@
+{{define "overflow_sheet"}}
+<div class="sheet-backdrop phone-only"
+     x-show="overflowOpen"
+     x-transition.opacity.duration.150ms
+     @click="overflowOpen = false"
+     x-cloak></div>
+<div class="sheet overflow-sheet phone-only"
+     :class="{ open: overflowOpen }"
+     role="menu"
+     aria-label="Menu"
+     x-cloak>
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <ul class="overflow-list">
+    <li>
+      <button type="button"
+              class="overflow-row"
+              @click="overflowOpen = false; loadArchived()"
+              role="menuitem">
+        <span class="overflow-row-icon" aria-hidden="true">🗂</span>
+        <span>Archive</span>
+      </button>
+    </li>
+    <li>
+      <a href="/admin" class="overflow-row" role="menuitem"
+         @click="overflowOpen = false">
+        <span class="overflow-row-icon" aria-hidden="true">⚙</span>
+        <span>Admin</span>
+      </a>
+    </li>
+    <li class="overflow-divider" aria-hidden="true"></li>
+    <li>
+      <button type="button"
+              class="overflow-row"
+              @click="toggleTheme()"
+              role="menuitem">
+        <span class="overflow-row-icon" aria-hidden="true">🌓</span>
+        <span>Theme: <span x-text="theme === 'dark' ? 'dark' : 'light'"></span></span>
+      </button>
+    </li>
+  </ul>
+</div>
+{{end}}
