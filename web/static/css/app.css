@@ -2689,3 +2689,20 @@ body::before {
   justify-content: flex-end;
   margin-top: 4px;
 }
+
+.drawer-back { display: none; }
+
+@media (max-width: 640px) {
+  .drawer-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    min-width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+    margin-right: 6px;
+  }
+}

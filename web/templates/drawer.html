@@ -1,6 +1,14 @@
 {{define "drawer"}}
 <div class="drawer-top">
   <div class="drawer-header">
+    <button type="button"
+            class="drawer-back phone-only"
+            @click="closeDrawer()"
+            aria-label="Back">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
     <div>
       <div class="drawer-card-id">#{{.Card.ID}} · {{.Card.Project}}</div>
       <div class="drawer-title">{{.Card.Title}}</div>
