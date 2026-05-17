@@ -2181,6 +2181,71 @@ body::before {
   box-shadow: 0 0 0 3px var(--danger-tint);
 }
 
+/* Admin create/edit affordances */
+.admin-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-error {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--danger-strong);
+  background: var(--danger-tint);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 20px;
+}
+
+.admin-readonly {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 9px 12px;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-content form input[type="text"],
+.modal-content form textarea,
+.modal-content form select {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.modal-content form textarea { resize: vertical; }
+
+.modal-content form input[type="text"]:focus,
+.modal-content form textarea:focus,
+.modal-content form select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
 /* Modal overlay (admin delete confirmations) */
 .modal {
   position: fixed;

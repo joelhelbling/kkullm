@@ -3,6 +3,7 @@ package web
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,15 +13,27 @@ import (
 )
 
 type adminProjectRow struct {
-	ID         int
-	Name       string
-	CardCount  int
-	AgentCount int
+	ID          int
+	Name        string
+	Description string
+	CardCount   int
+	AgentCount  int
+}
+
+// adminProjectForm carries the values a user submitted, so an error
+// re-render can repopulate the reopened modal.
+type adminProjectForm struct {
+	ID          int
+	Name        string
+	Description string
 }
 
 type adminProjectsData struct {
 	Section  string
 	Projects []adminProjectRow
+	Error    string
+	Form     adminProjectForm
+	Reopen   string // "", "create", or "edit"
 }
 
 type adminAgentsData struct {
@@ -39,29 +52,59 @@ func (ws *WebServer) handleAdminRoot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ws *WebServer) handleAdminProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := ws.store.ListProjects()
+	data, err := ws.projectsPageData()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	ws.renderProjectsPage(w, http.StatusOK, data)
+}
+
+// projectsPageData builds the full Projects admin page model from the store.
+func (ws *WebServer) projectsPageData() (adminProjectsData, error) {
+	projects, err := ws.store.ListProjects()
+	if err != nil {
+		return adminProjectsData{}, err
 	}
 	rows := make([]adminProjectRow, 0, len(projects))
 	for _, p := range projects {
 		cc, err := ws.store.CountCardsForProject(p.ID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return adminProjectsData{}, err
 		}
 		ac, err := ws.store.CountAgentsForProject(p.ID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			return adminProjectsData{}, err
 		}
-		rows = append(rows, adminProjectRow{ID: p.ID, Name: p.Name, CardCount: cc, AgentCount: ac})
+		rows = append(rows, adminProjectRow{
+			ID: p.ID, Name: p.Name, Description: p.Description,
+			CardCount: cc, AgentCount: ac,
+		})
 	}
+	return adminProjectsData{Section: "projects", Projects: rows}, nil
+}
+
+func (ws *WebServer) renderProjectsPage(w http.ResponseWriter, status int, data adminProjectsData) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.ExecuteTemplate(w, "admin_projects", adminProjectsData{Section: "projects", Projects: rows}); err != nil {
+	w.WriteHeader(status)
+	if err := tmpl.ExecuteTemplate(w, "admin_projects", data); err != nil {
+		// Headers are already sent; nothing more we can do but log via the error.
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+// renderProjectError re-renders the Projects page with an error banner and the
+// submitted values, reopening the modal named by reopen ("create" or "edit").
+func (ws *WebServer) renderProjectError(w http.ResponseWriter, msg string, form adminProjectForm, reopen string) {
+	data, err := ws.projectsPageData()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data.Error = msg
+	data.Form = form
+	data.Reopen = reopen
+	ws.renderProjectsPage(w, http.StatusBadRequest, data)
 }
 
 func (ws *WebServer) handleAdminAgents(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +119,31 @@ func (ws *WebServer) handleAdminAgents(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ws *WebServer) handleAdminRenameProject(w http.ResponseWriter, r *http.Request) {
+func (ws *WebServer) handleAdminCreateProject(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	description := strings.TrimSpace(r.FormValue("description"))
+	form := adminProjectForm{Name: name, Description: description}
+
+	if name == "" {
+		ws.renderProjectError(w, "Project name is required.", form, "create")
+		return
+	}
+	if _, err := ws.store.CreateProject(name, description); err != nil {
+		if isUniqueViolation(err) {
+			ws.renderProjectError(w, fmt.Sprintf("A project named %q already exists.", name), form, "create")
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/admin/projects", http.StatusSeeOther)
+}
+
+func (ws *WebServer) handleAdminUpdateProject(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "bad id", http.StatusBadRequest)
@@ -87,12 +154,30 @@ func (ws *WebServer) handleAdminRenameProject(w http.ResponseWriter, r *http.Req
 		return
 	}
 	name := strings.TrimSpace(r.FormValue("name"))
-	if err := ws.store.RenameProject(id, name); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	description := strings.TrimSpace(r.FormValue("description"))
+	form := adminProjectForm{ID: id, Name: name, Description: description}
+
+	if name == "" {
+		ws.renderProjectError(w, "Project name is required.", form, "edit")
+		return
+	}
+	if err := ws.store.UpdateProject(id, name, description); err != nil {
+		if isUniqueViolation(err) {
+			ws.renderProjectError(w, fmt.Sprintf("A project named %q already exists.", name), form, "edit")
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	ws.broadcastProjectRenamed(id, name)
 	http.Redirect(w, r, "/admin/projects", http.StatusSeeOther)
+}
+
+// isUniqueViolation reports whether err is a SQLite UNIQUE constraint failure.
+// The modernc.org/sqlite driver reports these with the text
+// "UNIQUE constraint failed" in the error message.
+func isUniqueViolation(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed")
 }
 
 func (ws *WebServer) handleAdminDeleteProject(w http.ResponseWriter, r *http.Request) {

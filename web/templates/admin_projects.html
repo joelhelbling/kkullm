@@ -1,19 +1,39 @@
 {{define "admin_projects"}}
 {{template "admin_shell_top" .}}
-<h1>Projects</h1>
-<p class="admin-desc">Rename or delete projects. Deleting a project permanently removes its cards, comments, agents, and assets.</p>
+<div class="admin-header">
+  <h1>Projects</h1>
+  <button type="button" class="btn-small" onclick="openProjectModal('create')">+ New project</button>
+</div>
+<p class="admin-desc">Create, edit, or delete projects. Deleting a project permanently removes its cards, comments, agents, and assets.</p>
+{{if .Error}}<div class="admin-error" role="alert">{{.Error}}</div>{{end}}
 <ul class="admin-list">
 {{range .Projects}}
-  <li class="admin-row" data-project-id="{{.ID}}" data-project-name="{{.Name}}">
-    <form method="post" action="/admin/projects/{{.ID}}/rename" class="inline-rename">
-      <input type="text" name="name" value="{{.Name}}" class="inline-rename-input" aria-label="Project name">
-      <button type="submit" class="btn-small">Save</button>
-    </form>
+  <li class="admin-row" data-project-id="{{.ID}}" data-project-name="{{.Name}}" data-project-description="{{.Description}}">
+    <span class="admin-name">{{.Name}}</span>
     <span class="admin-meta">{{.CardCount}} cards · {{.AgentCount}} agents</span>
-    <button type="button" class="btn-outlined-danger" onclick="openDeleteProjectModal(this)">Delete</button>
+    <span class="admin-row-actions">
+      <button type="button" class="btn-small" onclick="openProjectModal('edit', this.closest('.admin-row'))">Edit</button>
+      <button type="button" class="btn-outlined-danger" onclick="openDeleteProjectModal(this)">Delete</button>
+    </span>
   </li>
 {{end}}
 </ul>
+
+<div id="project-modal" class="modal" hidden>
+  <div class="modal-content">
+    <h2 id="pm-title">New project</h2>
+    <form method="post" id="project-form">
+      <label for="pm-name">Name</label>
+      <input id="pm-name" type="text" name="name" autocomplete="off" required>
+      <label for="pm-description">Description</label>
+      <textarea id="pm-description" name="description" rows="3"></textarea>
+      <div class="modal-actions">
+        <button type="button" onclick="document.getElementById('project-modal').hidden = true">Cancel</button>
+        <button type="submit" class="btn-small">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <div id="delete-project-modal" class="modal" hidden>
   <div class="modal-content danger-panel">
@@ -28,17 +48,49 @@
     </form>
   </div>
 </div>
+
 <script>
+function openProjectModal(mode, row) {
+  const form = document.getElementById('project-form');
+  const name = document.getElementById('pm-name');
+  const desc = document.getElementById('pm-description');
+  if (mode === 'edit') {
+    document.getElementById('pm-title').textContent = 'Edit project';
+    form.action = '/admin/projects/' + row.dataset.projectId + '/update';
+    name.value = row.dataset.projectName;
+    desc.value = row.dataset.projectDescription;
+  } else {
+    document.getElementById('pm-title').textContent = 'New project';
+    form.action = '/admin/projects/create';
+    name.value = '';
+    desc.value = '';
+  }
+  document.getElementById('project-modal').hidden = false;
+}
 function openDeleteProjectModal(btn) {
   const row = btn.closest('.admin-row');
-  const id = row.dataset.projectId;
-  const name = row.dataset.projectName;
-  document.getElementById('dp-name').textContent = name;
-  document.getElementById('delete-project-form').action = '/admin/projects/' + id + '/delete';
+  document.getElementById('dp-name').textContent = row.dataset.projectName;
+  document.getElementById('delete-project-form').action = '/admin/projects/' + row.dataset.projectId + '/delete';
   document.getElementById('dp-confirm').value = '';
   document.getElementById('dp-btn').disabled = true;
   document.getElementById('delete-project-modal').hidden = false;
 }
 </script>
+{{if .Reopen}}
+<script>
+(function () {
+  document.getElementById('pm-name').value = {{.Form.Name}};
+  document.getElementById('pm-description').value = {{.Form.Description}};
+  {{if eq .Reopen "edit"}}
+  document.getElementById('pm-title').textContent = 'Edit project';
+  document.getElementById('project-form').action = '/admin/projects/{{.Form.ID}}/update';
+  {{else}}
+  document.getElementById('pm-title').textContent = 'New project';
+  document.getElementById('project-form').action = '/admin/projects/create';
+  {{end}}
+  document.getElementById('project-modal').hidden = false;
+})();
+</script>
+{{end}}
 {{template "admin_shell_bottom" .}}
 {{end}}

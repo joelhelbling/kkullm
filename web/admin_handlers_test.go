@@ -61,15 +61,76 @@ func TestAdminAgents_Renders(t *testing.T) {
 	}
 }
 
-func TestAdminRenameProject_OK(t *testing.T) {
+func TestAdminCreateProject_OK(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
-	p, err := st.CreateProject("orig", "")
+
+	form := url.Values{"name": {"newproj"}, "description": {"a fresh project"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/projects/create",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusFound {
+		t.Fatalf("expected redirect, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+	p, err := st.GetProjectByName("newproj")
+	if err != nil {
+		t.Fatalf("GetProjectByName: %v", err)
+	}
+	if p.Description != "a fresh project" {
+		t.Errorf("description = %q, want 'a fresh project'", p.Description)
+	}
+}
+
+func TestAdminCreateProject_EmptyName(t *testing.T) {
+	mux, _ := setupTestMuxWithStore(t)
+
+	form := url.Values{"name": {"  "}, "description": {"x"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/projects/create",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "name is required") {
+		t.Errorf("expected error message in body, got: %s", rec.Body.String())
+	}
+}
+
+func TestAdminCreateProject_DuplicateName(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+	if _, err := st.CreateProject("dup", ""); err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+
+	form := url.Values{"name": {"dup"}, "description": {""}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/projects/create",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "already exists") {
+		t.Errorf("expected 'already exists' in body, got: %s", rec.Body.String())
+	}
+}
+
+func TestAdminUpdateProject_OK(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+	p, err := st.CreateProject("orig", "orig desc")
 	if err != nil {
 		t.Fatalf("CreateProject: %v", err)
 	}
 
-	form := url.Values{"name": {"new"}}
-	req := httptest.NewRequest(http.MethodPost, "/admin/projects/"+strconv.Itoa(p.ID)+"/rename",
+	form := url.Values{"name": {"renamed"}, "description": {"updated desc"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/projects/"+strconv.Itoa(p.ID)+"/update",
 		strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec := httptest.NewRecorder()
@@ -82,8 +143,8 @@ func TestAdminRenameProject_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetProject: %v", err)
 	}
-	if got.Name != "new" {
-		t.Errorf("expected name 'new', got %q", got.Name)
+	if got.Name != "renamed" || got.Description != "updated desc" {
+		t.Errorf("got name=%q desc=%q, want 'renamed'/'updated desc'", got.Name, got.Description)
 	}
 }
 
