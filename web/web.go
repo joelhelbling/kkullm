@@ -58,7 +58,8 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	mux.Handle("POST /admin/projects/create", RequireAdmin(http.HandlerFunc(ws.handleAdminCreateProject)))
 	mux.Handle("POST /admin/projects/{id}/update", RequireAdmin(http.HandlerFunc(ws.handleAdminUpdateProject)))
 	mux.Handle("POST /admin/projects/{id}/delete", RequireAdmin(http.HandlerFunc(ws.handleAdminDeleteProject)))
-	mux.Handle("POST /admin/agents/{id}/rename", RequireAdmin(http.HandlerFunc(ws.handleAdminRenameAgent)))
+	mux.Handle("POST /admin/agents/create", RequireAdmin(http.HandlerFunc(ws.handleAdminCreateAgent)))
+	mux.Handle("POST /admin/agents/{id}/update", RequireAdmin(http.HandlerFunc(ws.handleAdminUpdateAgent)))
 	mux.Handle("POST /admin/agents/{id}/delete", RequireAdmin(http.HandlerFunc(ws.handleAdminDeleteAgent)))
 	mux.Handle("POST /admin/danger/purge", RequireAdmin(http.HandlerFunc(ws.handleAdminPurge)))
 

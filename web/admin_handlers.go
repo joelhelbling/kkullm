@@ -36,9 +36,21 @@ type adminProjectsData struct {
 	Reopen   string // "", "create", or "edit"
 }
 
+// adminAgentForm carries submitted values for an error re-render.
+type adminAgentForm struct {
+	ID      int
+	Name    string
+	Project string
+	Bio     string
+}
+
 type adminAgentsData struct {
-	Section string
-	Agents  []model.Agent
+	Section  string
+	Agents   []model.Agent
+	Projects []model.Project // populates the create modal's project <select>
+	Error    string
+	Form     adminAgentForm
+	Reopen   string // "", "create", or "edit"
 }
 
 type adminDangerData struct {
@@ -108,15 +120,113 @@ func (ws *WebServer) renderProjectError(w http.ResponseWriter, msg string, form 
 }
 
 func (ws *WebServer) handleAdminAgents(w http.ResponseWriter, r *http.Request) {
-	agents, err := ws.store.ListAgents("")
+	data, err := ws.agentsPageData()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	ws.renderAgentsPage(w, http.StatusOK, data)
+}
+
+func (ws *WebServer) agentsPageData() (adminAgentsData, error) {
+	agents, err := ws.store.ListAgents("")
+	if err != nil {
+		return adminAgentsData{}, err
+	}
+	projects, err := ws.store.ListProjects()
+	if err != nil {
+		return adminAgentsData{}, err
+	}
+	return adminAgentsData{Section: "agents", Agents: agents, Projects: projects}, nil
+}
+
+func (ws *WebServer) renderAgentsPage(w http.ResponseWriter, status int, data adminAgentsData) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.ExecuteTemplate(w, "admin_agents", adminAgentsData{Section: "agents", Agents: agents}); err != nil {
+	w.WriteHeader(status)
+	if err := tmpl.ExecuteTemplate(w, "admin_agents", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (ws *WebServer) renderAgentError(w http.ResponseWriter, msg string, form adminAgentForm, reopen string) {
+	data, err := ws.agentsPageData()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data.Error = msg
+	data.Form = form
+	data.Reopen = reopen
+	ws.renderAgentsPage(w, http.StatusBadRequest, data)
+}
+
+func (ws *WebServer) handleAdminCreateAgent(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	projectName := strings.TrimSpace(r.FormValue("project"))
+	bio := strings.TrimSpace(r.FormValue("bio"))
+	form := adminAgentForm{Name: name, Project: projectName, Bio: bio}
+
+	if name == "" {
+		ws.renderAgentError(w, "Agent name is required.", form, "create")
+		return
+	}
+	if projectName == "" {
+		ws.renderAgentError(w, "Please choose a project for the agent.", form, "create")
+		return
+	}
+	project, err := ws.store.GetProjectByName(projectName)
+	if err != nil {
+		ws.renderAgentError(w, fmt.Sprintf("Project %q was not found.", projectName), form, "create")
+		return
+	}
+	if _, err := ws.store.CreateAgent(name, project.ID, bio); err != nil {
+		if isUniqueViolation(err) {
+			ws.renderAgentError(w, fmt.Sprintf("An agent named %q already exists.", name), form, "create")
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/admin/agents", http.StatusSeeOther)
+}
+
+func (ws *WebServer) handleAdminUpdateAgent(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	bio := strings.TrimSpace(r.FormValue("bio"))
+	form := adminAgentForm{ID: id, Name: name, Bio: bio}
+	// The agent's project is fixed; look it up so an error re-render can show
+	// it read-only in the reopened edit modal.
+	if agent, err := ws.store.GetAgent(id); err == nil {
+		form.Project = agent.Project
+	}
+
+	if name == "" {
+		ws.renderAgentError(w, "Agent name is required.", form, "edit")
+		return
+	}
+	if err := ws.store.UpdateAgent(id, name, bio); err != nil {
+		if isUniqueViolation(err) {
+			ws.renderAgentError(w, fmt.Sprintf("An agent named %q already exists.", name), form, "edit")
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	ws.broadcastAgentRenamed(id, name)
+	http.Redirect(w, r, "/admin/agents", http.StatusSeeOther)
 }
 
 func (ws *WebServer) handleAdminCreateProject(w http.ResponseWriter, r *http.Request) {
@@ -211,25 +321,6 @@ func (ws *WebServer) handleAdminDeleteProject(w http.ResponseWriter, r *http.Req
 	}
 	ws.broadcastProjectDeleted(id)
 	http.Redirect(w, r, "/admin/projects", http.StatusSeeOther)
-}
-
-func (ws *WebServer) handleAdminRenameAgent(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.PathValue("id"))
-	if err != nil {
-		http.Error(w, "bad id", http.StatusBadRequest)
-		return
-	}
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	name := strings.TrimSpace(r.FormValue("name"))
-	if err := ws.store.RenameAgent(id, name); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	ws.broadcastAgentRenamed(id, name)
-	http.Redirect(w, r, "/admin/agents", http.StatusSeeOther)
 }
 
 func (ws *WebServer) handleAdminDeleteAgent(w http.ResponseWriter, r *http.Request) {

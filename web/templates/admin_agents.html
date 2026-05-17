@@ -1,20 +1,107 @@
 {{define "admin_agents"}}
 {{template "admin_shell_top" .}}
-<h1>Agents</h1>
-<p class="admin-desc">Rename or delete agents. Deleting an agent unassigns their cards; their comments are preserved with attribution.</p>
+<div class="admin-header">
+  <h1>Agents</h1>
+  <button type="button" class="btn-small" onclick="openAgentModal('create')">+ New agent</button>
+</div>
+<p class="admin-desc">Create, edit, or delete agents. Deleting an agent unassigns their cards; their comments are preserved with attribution.</p>
+{{if .Error}}<div class="admin-error" role="alert">{{.Error}}</div>{{end}}
 <ul class="admin-list">
 {{range .Agents}}
-  <li class="admin-row">
-    <form method="post" action="/admin/agents/{{.ID}}/rename" class="inline-rename">
-      <input type="text" name="name" value="{{.Name}}" class="inline-rename-input" aria-label="Agent name">
-    </form>
+  <li class="admin-row" data-agent-id="{{.ID}}" data-agent-name="{{.Name}}" data-agent-bio="{{.Bio}}" data-agent-project="{{.Project}}">
+    <span class="admin-name">{{.Name}}</span>
     <span class="admin-meta">project: {{.Project}}</span>
-    <form method="post" action="/admin/agents/{{.ID}}/delete" class="admin-delete-form">
-      <button type="submit" class="btn-outlined-danger"
-              onclick="return confirm('Delete agent {{.Name}}? Their cards will be unassigned; comments preserved.')">Delete</button>
-    </form>
+    <span class="admin-row-actions">
+      <button type="button" class="btn-small" onclick="openAgentModal('edit', this.closest('.admin-row'))">Edit</button>
+      <form method="post" action="/admin/agents/{{.ID}}/delete" class="admin-delete-form">
+        <button type="submit" class="btn-outlined-danger"
+                onclick="return confirmDeleteAgent(this)">Delete</button>
+      </form>
+    </span>
   </li>
 {{end}}
 </ul>
+
+<div id="agent-modal" class="modal" hidden>
+  <div class="modal-content">
+    <h2 id="am-title">New agent</h2>
+    <form method="post" id="agent-form">
+      <label for="am-name">Name</label>
+      <input id="am-name" type="text" name="name" autocomplete="off" required>
+      <div id="am-project-create">
+        <label for="am-project">Project</label>
+        <select id="am-project" name="project">
+          <option value="">— choose a project —</option>
+          {{range .Projects}}<option value="{{.Name}}">{{.Name}}</option>{{end}}
+        </select>
+      </div>
+      <div id="am-project-edit" hidden>
+        <label>Project</label>
+        <p id="am-project-readonly" class="admin-readonly"></p>
+      </div>
+      <label for="am-bio">Bio</label>
+      <textarea id="am-bio" name="bio" rows="3"></textarea>
+      <div class="modal-actions">
+        <button type="button" onclick="document.getElementById('agent-modal').hidden = true">Cancel</button>
+        <button type="submit" class="btn-small">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openAgentModal(mode, row) {
+  const form = document.getElementById('agent-form');
+  const createBlock = document.getElementById('am-project-create');
+  const editBlock = document.getElementById('am-project-edit');
+  const select = document.getElementById('am-project');
+  if (mode === 'edit') {
+    document.getElementById('am-title').textContent = 'Edit agent';
+    form.action = '/admin/agents/' + row.dataset.agentId + '/update';
+    document.getElementById('am-name').value = row.dataset.agentName;
+    document.getElementById('am-bio').value = row.dataset.agentBio;
+    document.getElementById('am-project-readonly').textContent = row.dataset.agentProject;
+    createBlock.hidden = true;
+    editBlock.hidden = false;
+    select.disabled = true;
+  } else {
+    document.getElementById('am-title').textContent = 'New agent';
+    form.action = '/admin/agents/create';
+    document.getElementById('am-name').value = '';
+    document.getElementById('am-bio').value = '';
+    select.value = '';
+    createBlock.hidden = false;
+    editBlock.hidden = true;
+    select.disabled = false;
+  }
+  document.getElementById('agent-modal').hidden = false;
+}
+function confirmDeleteAgent(btn) {
+  const name = btn.closest('.admin-row').dataset.agentName;
+  return confirm('Delete agent ' + name + '? Their cards will be unassigned; comments preserved.');
+}
+</script>
+{{if .Reopen}}
+<script>
+(function () {
+  var select = document.getElementById('am-project');
+  document.getElementById('am-name').value = {{.Form.Name}};
+  document.getElementById('am-bio').value = {{.Form.Bio}};
+  {{if eq .Reopen "edit"}}
+  document.getElementById('am-title').textContent = 'Edit agent';
+  document.getElementById('agent-form').action = '/admin/agents/{{.Form.ID}}/update';
+  document.getElementById('am-project-readonly').textContent = {{.Form.Project}};
+  document.getElementById('am-project-create').hidden = true;
+  document.getElementById('am-project-edit').hidden = false;
+  select.disabled = true;
+  {{else}}
+  document.getElementById('am-title').textContent = 'New agent';
+  document.getElementById('agent-form').action = '/admin/agents/create';
+  select.value = {{.Form.Project}};
+  {{end}}
+  document.getElementById('agent-modal').hidden = false;
+})();
+</script>
+{{end}}
 {{template "admin_shell_bottom" .}}
 {{end}}

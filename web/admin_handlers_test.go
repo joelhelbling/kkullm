@@ -196,19 +196,109 @@ func TestAdminDeleteProject_AcceptsMatchedConfirm(t *testing.T) {
 	}
 }
 
-func TestAdminRenameAgent_OK(t *testing.T) {
+func TestAdminCreateAgent_OK(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 	p, err := st.CreateProject("p1", "")
 	if err != nil {
 		t.Fatalf("CreateProject: %v", err)
 	}
-	a, err := st.CreateAgent("old", p.ID, "")
+
+	form := url.Values{"name": {"rosie"}, "project": {"p1"}, "bio": {"helper bot"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/agents/create",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusFound {
+		t.Fatalf("expected redirect, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+	a, err := st.GetAgentByName("rosie")
+	if err != nil {
+		t.Fatalf("GetAgentByName: %v", err)
+	}
+	if a.ProjectID != p.ID {
+		t.Errorf("ProjectID = %d, want %d", a.ProjectID, p.ID)
+	}
+	if a.Bio != "helper bot" {
+		t.Errorf("bio = %q, want 'helper bot'", a.Bio)
+	}
+}
+
+func TestAdminCreateAgent_EmptyName(t *testing.T) {
+	mux, _ := setupTestMuxWithStore(t)
+
+	form := url.Values{"name": {"  "}, "project": {"orchestration"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/agents/create",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "name is required") {
+		t.Errorf("expected error message in body, got: %s", rec.Body.String())
+	}
+}
+
+func TestAdminCreateAgent_MissingProject(t *testing.T) {
+	mux, _ := setupTestMuxWithStore(t)
+
+	form := url.Values{"name": {"rosie"}, "project": {""}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/agents/create",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "project") {
+		t.Errorf("expected a project-related error, got: %s", rec.Body.String())
+	}
+}
+
+func TestAdminCreateAgent_DuplicateName(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+	p, err := st.CreateProject("p1", "")
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if _, err := st.CreateAgent("dupe", p.ID, ""); err != nil {
+		t.Fatalf("CreateAgent: %v", err)
+	}
+
+	form := url.Values{"name": {"dupe"}, "project": {"p1"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/agents/create",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "already exists") {
+		t.Errorf("expected 'already exists' in body, got: %s", rec.Body.String())
+	}
+}
+
+func TestAdminUpdateAgent_OK(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+	p, err := st.CreateProject("p1", "")
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	a, err := st.CreateAgent("old", p.ID, "old bio")
 	if err != nil {
 		t.Fatalf("CreateAgent: %v", err)
 	}
 
-	form := url.Values{"name": {"new"}}
-	req := httptest.NewRequest(http.MethodPost, "/admin/agents/"+strconv.Itoa(a.ID)+"/rename",
+	form := url.Values{"name": {"new"}, "bio": {"new bio"}}
+	req := httptest.NewRequest(http.MethodPost, "/admin/agents/"+strconv.Itoa(a.ID)+"/update",
 		strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec := httptest.NewRecorder()
@@ -221,8 +311,8 @@ func TestAdminRenameAgent_OK(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAgent: %v", err)
 	}
-	if got.Name != "new" {
-		t.Errorf("expected name 'new', got %q", got.Name)
+	if got.Name != "new" || got.Bio != "new bio" {
+		t.Errorf("got name=%q bio=%q, want 'new'/'new bio'", got.Name, got.Bio)
 	}
 }
 
