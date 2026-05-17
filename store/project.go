@@ -54,20 +54,6 @@ func (s *Store) GetProjectByName(name string) (*model.Project, error) {
 	return p, nil
 }
 
-func (s *Store) RenameProject(id int, name string) error {
-	if name == "" {
-		return fmt.Errorf("project name cannot be empty")
-	}
-	_, err := s.db.Exec(
-		"UPDATE projects SET name = ?, updated_at = datetime('now') WHERE id = ?",
-		name, id,
-	)
-	if err != nil {
-		return fmt.Errorf("rename project %d: %w", id, err)
-	}
-	return nil
-}
-
 func (s *Store) UpdateProject(id int, name, description string) error {
 	if name == "" {
 		return fmt.Errorf("project name cannot be empty")
