@@ -131,6 +131,9 @@
   <!-- Toast container -->
   <div id="toast-container"></div>
 
+  <!-- Mobile picker sheet (phone only) -->
+  {{template "picker_sheet" .}}
+
   <!-- Bootstrap data for Alpine (server-rendered initial state) -->
   <script id="boot-data" type="application/json">{{.BootData}}</script>
 

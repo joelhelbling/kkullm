@@ -1,0 +1,77 @@
+{{define "picker_sheet"}}
+<div class="sheet-backdrop phone-only"
+     x-show="pickerOpen"
+     x-transition.opacity.duration.150ms
+     @click="pickerOpen = false"
+     x-cloak></div>
+<div class="sheet picker-sheet phone-only"
+     :class="{ open: pickerOpen }"
+     role="dialog"
+     aria-modal="true"
+     aria-label="Choose project or agent"
+     x-cloak>
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <div class="picker-tabs">
+    <button type="button"
+            class="picker-chevron"
+            @click="setPickerPage('projects')"
+            aria-label="Projects page">◀</button>
+    <button type="button"
+            class="picker-tab"
+            :class="{ active: pickerPage === 'projects' }"
+            @click="setPickerPage('projects')">Projects</button>
+    <span class="picker-dots" aria-hidden="true">
+      <span class="picker-dot" :class="{ active: pickerPage === 'projects' }"></span>
+      <span class="picker-dot" :class="{ active: pickerPage === 'agents' }"></span>
+    </span>
+    <button type="button"
+            class="picker-tab"
+            :class="{ active: pickerPage === 'agents' }"
+            @click="setPickerPage('agents')">Agents</button>
+    <button type="button"
+            class="picker-chevron"
+            @click="setPickerPage('agents')"
+            aria-label="Agents page">▶</button>
+  </div>
+  <div class="picker-pages" x-ref="pickerPages">
+    <div class="picker-page" data-page="projects">
+      <ul class="picker-list">
+        <template x-for="p in projects" :key="p.id">
+          <li>
+            <button type="button"
+                    class="picker-row"
+                    :class="{ active: viewMode === 'project' && String(currentProject) === String(p.id) }"
+                    @click="selectProject(p.id)">
+              <span class="picker-row-name" x-text="p.name"></span>
+              <span class="picker-row-check" aria-hidden="true"
+                    x-show="viewMode === 'project' && String(currentProject) === String(p.id)">✓</span>
+            </button>
+          </li>
+        </template>
+      </ul>
+    </div>
+    <div class="picker-page" data-page="agents">
+      <ul class="picker-list">
+        <template x-if="agents.length === 0">
+          <li class="picker-empty">No agents.</li>
+        </template>
+        <template x-for="a in agents" :key="a.id">
+          <li>
+            <button type="button"
+                    class="picker-row"
+                    :class="{ active: viewMode === 'agent' && String(currentAgent) === String(a.id) }"
+                    @click="selectAgent(a.id)">
+              <span class="picker-row-name">
+                <span x-text="a.name"></span>
+                <span class="picker-row-meta" x-text="'· ' + a.project"></span>
+              </span>
+              <span class="picker-row-check" aria-hidden="true"
+                    x-show="viewMode === 'agent' && String(currentAgent) === String(a.id)">✓</span>
+            </button>
+          </li>
+        </template>
+      </ul>
+    </div>
+  </div>
+</div>
+{{end}}
