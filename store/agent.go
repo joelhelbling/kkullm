@@ -49,31 +49,6 @@ func (s *Store) GetAgentByName(name string) (*model.Agent, error) {
 	return a, nil
 }
 
-func (s *Store) RenameAgent(id int, name string) error {
-	if name == "" {
-		return fmt.Errorf("agent name cannot be empty")
-	}
-	tx, err := s.db.Begin()
-	if err != nil {
-		return fmt.Errorf("begin: %w", err)
-	}
-	defer tx.Rollback()
-
-	if _, err := tx.Exec(
-		"UPDATE agents SET name = ?, updated_at = datetime('now') WHERE id = ?",
-		name, id,
-	); err != nil {
-		return fmt.Errorf("rename agent %d: %w", id, err)
-	}
-	if _, err := tx.Exec(
-		"UPDATE comments SET author_name = ? WHERE agent_id = ?",
-		name, id,
-	); err != nil {
-		return fmt.Errorf("backfill author_name: %w", err)
-	}
-	return tx.Commit()
-}
-
 func (s *Store) UpdateAgent(id int, name, bio string) error {
 	if name == "" {
 		return fmt.Errorf("agent name cannot be empty")
