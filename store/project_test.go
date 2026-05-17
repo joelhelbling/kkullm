@@ -117,6 +117,59 @@ func TestRenameProject_Empty(t *testing.T) {
 	}
 }
 
+func TestUpdateProject_OK(t *testing.T) {
+	s := setupTestDB(t)
+
+	created, err := s.CreateProject("old-name", "old description")
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+
+	if err := s.UpdateProject(created.ID, "new-name", "new description"); err != nil {
+		t.Fatalf("UpdateProject: %v", err)
+	}
+
+	found, err := s.GetProject(created.ID)
+	if err != nil {
+		t.Fatalf("GetProject: %v", err)
+	}
+	if found.Name != "new-name" {
+		t.Errorf("name = %q, want 'new-name'", found.Name)
+	}
+	if found.Description != "new description" {
+		t.Errorf("description = %q, want 'new description'", found.Description)
+	}
+}
+
+func TestUpdateProject_DuplicateName(t *testing.T) {
+	s := setupTestDB(t)
+
+	if _, err := s.CreateProject("first", ""); err != nil {
+		t.Fatalf("CreateProject first: %v", err)
+	}
+	second, err := s.CreateProject("second", "")
+	if err != nil {
+		t.Fatalf("CreateProject second: %v", err)
+	}
+
+	if err := s.UpdateProject(second.ID, "first", ""); err == nil {
+		t.Error("expected error updating to duplicate name, got nil")
+	}
+}
+
+func TestUpdateProject_EmptyName(t *testing.T) {
+	s := setupTestDB(t)
+
+	created, err := s.CreateProject("some-proj", "")
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+
+	if err := s.UpdateProject(created.ID, "", "desc"); err == nil {
+		t.Error("expected error updating to empty name, got nil")
+	}
+}
+
 func TestDeleteProject_CascadesAllChildren(t *testing.T) {
 	s := setupTestDB(t)
 
