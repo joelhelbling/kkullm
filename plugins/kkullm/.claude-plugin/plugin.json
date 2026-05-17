@@ -1,0 +1,10 @@
+{
+  "name": "kkullm",
+  "description": "Skills for driving the kkullm CLI and board",
+  "version": "0.1.0",
+  "author": {
+    "name": "Joel Helbling"
+  },
+  "homepage": "https://github.com/joelhelbling/kkullm",
+  "license": "MIT"
+}
