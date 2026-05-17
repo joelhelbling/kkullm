@@ -28,3 +28,7 @@ Kkullm is planned as an open-source, self-hosted system, with a web UI for human
 ## Project Status
 
 Early-stage implementation. Working today: Go backend, HTTP API, SQLite store (via `modernc.org/sqlite`, no CGO), server-rendered web UI with SSE live updates, and a Cobra-based CLI. Design documents live in `docs/ideation/`; specs and implementation plans live in `docs/superpowers/`.
+
+## Maintenance
+
+- When the CLI changes (commands, flags, conventions), double-check the `/kkullm:cli` skill at `plugins/kkullm/skills/cli/SKILL.md` and update it if needed.
