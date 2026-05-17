@@ -2310,6 +2310,9 @@ body::before {
 
   /* Carry-over from the previous 720px blocks */
   .board { padding-left: 16px; padding-right: 16px; }
+  /* On phone, always show the Blocked column even when empty.
+     The .blocked-hidden class is toggled by JS to hide it on desktop. */
+  .column.column-blocked.blocked-hidden { display: flex; }
   .drawer { width: 100%; }
   .compose-modal { max-width: none; margin: 0 8px; }
   .compose-grid { grid-template-columns: 1fr; }
