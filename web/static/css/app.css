@@ -2714,3 +2714,27 @@ body::before {
     margin-right: 6px;
   }
 }
+
+/* ===== Phone polish sweep (admin, archived, blockers, card permalink) ===== */
+@media (max-width: 640px) {
+  /* Hide desktop-only keyboard hints anywhere they appear */
+  .kbd-hint, kbd { display: none !important; }
+
+  /* Ensure all forms collapse to single column */
+  .form-grid, .compose-grid, .drawer-meta, .admin-row { grid-template-columns: 1fr !important; }
+
+  /* Larger labels and inputs read better at phone size */
+  label, .field-label { font-size: 13px; }
+  input[type="text"], input[type="email"], input[type="password"],
+  input[type="search"], input[type="number"], textarea, select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Cards in any vertical list (archived, blockers, considering pager) */
+  .archived-list, .blockers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
