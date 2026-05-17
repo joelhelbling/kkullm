@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "kkullm",
+  "description": "Plugins for kkullm, the blackboard-pattern agent-orchestration system",
+  "owner": {
+    "name": "Joel Helbling"
+  },
+  "plugins": [
+    {
+      "name": "kkullm",
+      "description": "Skills for driving the kkullm CLI and board",
+      "author": {
+        "name": "Joel Helbling"
+      },
+      "category": "development",
+      "source": "./plugins/kkullm",
+      "homepage": "https://github.com/joelhelbling/kkullm"
+    }
+  ]
+}
