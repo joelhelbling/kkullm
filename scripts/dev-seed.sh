@@ -119,7 +119,7 @@ create_card() {
 
 add_comment() {
   local card_id=$1 as_agent=$2 body=$3
-  kk --as "$as_agent" comment add "$card_id" --body "$body" >/dev/null
+  kk --as "$as_agent" comment create "$card_id" --body "$body" >/dev/null
 }
 
 # --- main flow --------------------------------------------------------------
