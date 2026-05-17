@@ -26,6 +26,8 @@ function kkullm() {
     pickerPage: 'projects',
     overflowOpen: false,
     quickCaptureOpen: false,
+    quickCaptureBusy: false,
+    quickCaptureError: '',
     boardCol: 'todo',
 
     init() {
@@ -448,6 +450,43 @@ function kkullm() {
       if (projectSelect && this.currentProject) {
         const cur = this.projects.find(p => String(p.id) === String(this.currentProject));
         if (cur) projectSelect.value = cur.name;
+      }
+    },
+
+    openQuickCapture() {
+      this.quickCaptureError = '';
+      this.quickCaptureBusy = false;
+      this.quickCaptureOpen = true;
+      this.$nextTick(() => {
+        const el = this.$refs.quickCaptureTitle;
+        if (el) el.focus();
+      });
+    },
+
+    async submitQuickCapture(evt) {
+      this.quickCaptureError = '';
+      this.quickCaptureBusy = true;
+      const form = evt.target;
+      const fd = new FormData(form);
+      try {
+        const body = {
+          title: (fd.get('title') || '').toString().trim(),
+          body: '',
+          status: 'considering',
+          project: (fd.get('project') || '').toString(),
+          assignees: [],
+          tags: [],
+        };
+        const resp = await this.postJSON('/api/cards', body);
+        const card = await resp.json();
+        if (!resp.ok) throw new Error(card.error || 'Could not add card.');
+        form.reset();
+        this.quickCaptureOpen = false;
+        this.showToast('Added to considering');
+      } catch (err) {
+        this.quickCaptureError = err.message || 'Something went wrong.';
+      } finally {
+        this.quickCaptureBusy = false;
       }
     },
 

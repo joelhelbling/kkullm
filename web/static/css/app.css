@@ -2602,3 +2602,90 @@ body::before {
   }
   .board > .column:first-child { margin-left: 12px; }
 }
+
+/* ===== Quick-capture FAB + sheet ===== */
+.quick-fab {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .quick-fab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    right: calc(16px + env(safe-area-inset-right));
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    z-index: 55;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--bg-page);
+    border: none;
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+  }
+  .quick-fab:active { transform: translateY(1px); }
+}
+
+.quick-capture-sheet { max-height: 70vh; }
+.quick-capture-form {
+  padding: 4px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.quick-capture-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary);
+}
+.quick-capture-form textarea {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 64px;
+}
+.quick-capture-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.quick-capture-meta-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  min-width: 70px;
+}
+.quick-capture-project {
+  flex: 1 1 auto;
+  min-height: 44px;
+}
+.quick-capture-status {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--status-considering);
+  background: var(--status-considering-tint);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+}
+.quick-capture-error {
+  color: var(--danger);
+  font-size: 14px;
+}
+.quick-capture-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
