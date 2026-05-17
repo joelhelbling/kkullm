@@ -2330,3 +2330,55 @@ body::before {
   .admin-menu-divider { display: none; }
   .admin-row { grid-template-columns: 1fr; gap: 10px; }
 }
+
+/* ===== Mobile top bar ===== */
+.topbar-mobile {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .topbar-mobile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    padding: 0 12px;
+    padding-top: env(safe-area-inset-top);
+    height: calc(56px + env(safe-area-inset-top));
+    background: var(--bg-page);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .topbar-brand {
+    font-family: var(--font-korean);
+    font-size: 18px;
+    color: var(--accent);
+    line-height: 1;
+    flex: 0 0 auto;
+  }
+  .topbar-view-name {
+    flex: 1 1 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    padding: 0 4px;
+    font-family: var(--font-display);
+    font-size: 18px;
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    min-height: 44px;
+  }
+  .topbar-caret {
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+  .topbar-overflow {
+    flex: 0 0 auto;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

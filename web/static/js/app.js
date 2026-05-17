@@ -21,6 +21,13 @@ function kkullm() {
     composeError: '',
     composeBusy: false,
 
+    // Mobile UI state (wired up in later tasks)
+    pickerOpen: false,
+    pickerPage: 'projects',
+    overflowOpen: false,
+    quickCaptureOpen: false,
+    boardCol: 'todo',
+
     init() {
       this.bootstrapData();
       this.initTheme();
@@ -64,6 +71,15 @@ function kkullm() {
       } catch (e) {
         console.warn('boot-data parse failed', e);
       }
+    },
+
+    currentViewName() {
+      if (this.viewMode === 'agent') {
+        const a = this.agents.find(x => String(x.id) === String(this.currentAgent));
+        return a ? a.name : '(no agent)';
+      }
+      const p = this.projects.find(x => String(x.id) === String(this.currentProject));
+      return p ? p.name : '(no project)';
     },
 
     // === Keyboard ===
