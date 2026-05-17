@@ -1840,25 +1840,6 @@ body::before {
 /* ===== Utilities ===== */
 .hidden { display: none !important; }
 
-/* ===== Responsive niceties ===== */
-@media (max-width: 720px) {
-  .nav {
-    padding: 0 16px;
-    height: auto;
-    flex-wrap: wrap;
-    gap: 12px;
-    padding-top: 12px;
-    padding-bottom: 12px;
-  }
-  .nav-rule { display: none; }
-  .brand-name { font-size: 20px; }
-  .board { padding-left: 16px; padding-right: 16px; }
-  .drawer { width: 100%; }
-  .compose-modal { max-width: none; margin: 0 8px; }
-  .compose-grid { grid-template-columns: 1fr; }
-  .drawer-meta { grid-template-columns: 1fr; gap: 12px; }
-}
-
 /* ===== Admin & Danger Zone ===== */
 .admin {
   position: relative;
@@ -2295,11 +2276,48 @@ body::before {
   text-decoration: underline;
 }
 
-@media (max-width: 720px) {
+/* Phone-only / desktop-only helpers (base state; overridden inside the phone media query) */
+.phone-only { display: none; }
+.desktop-only { display: revert; }
+
+/* ===== Phone mode (≤640px) =====
+   Single breakpoint that contains all phone-specific overrides.
+   Tablets and resized desktop windows fall through to desktop layout. */
+@media (max-width: 640px) {
+  /* Body safe-area paddings */
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Suppress iOS auto-zoom on input focus */
+  input, select, textarea {
+    font-size: 16px;
+  }
+
+  /* Minimum tap target */
+  button, .btn, a.btn {
+    min-height: 44px;
+  }
+
+  /* Show/hide helpers (no-op on desktop) */
+  .phone-only { display: revert; }
+  .desktop-only { display: none !important; }
+
+  /* Hide the existing desktop nav entirely. The mobile top bar (added separately)
+     uses .phone-only so it only shows below this breakpoint. */
+  .nav { display: none !important; }
+
+  /* Carry-over from the previous 720px blocks */
+  .board { padding-left: 16px; padding-right: 16px; }
+  .drawer { width: 100%; }
+  .compose-modal { max-width: none; margin: 0 8px; }
+  .compose-grid { grid-template-columns: 1fr; }
+  .drawer-meta { grid-template-columns: 1fr; gap: 12px; }
   .admin {
     grid-template-columns: 1fr;
     gap: 24px;
-    padding: calc(var(--nav-height) + 20px) 16px 40px;
+    padding: 20px 16px 40px;
   }
   .admin-menu {
     flex-direction: row;
@@ -2310,8 +2328,5 @@ body::before {
     padding-bottom: 12px;
   }
   .admin-menu-divider { display: none; }
-  .admin-row {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
+  .admin-row { grid-template-columns: 1fr; gap: 10px; }
 }
