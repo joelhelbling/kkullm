@@ -41,6 +41,7 @@ function kkullm() {
           this.$nextTick(() => this.initSortable());
           this.updateBlockerCount();
           this.syncBlockedColumnVisibility();
+          this.$nextTick(() => this.initBoardPager());
         }
         if (e.detail.target.id === 'drawer-container') {
           this.drawerOpen = true;
@@ -183,6 +184,102 @@ function kkullm() {
     },
 
     // === Navigation ===
+
+    boardPagerStatuses() {
+      return ['considering', 'todo', 'blocked', 'in_flight', 'completed', 'tabled'];
+    },
+
+    boardColLabel() {
+      const map = {
+        considering: 'Considering', todo: 'Todo', blocked: 'Blocked',
+        in_flight: 'In Flight', completed: 'Completed', tabled: 'Tabled',
+      };
+      return map[this.boardCol] || '';
+    },
+
+    boardColCount() {
+      const col = this.boardCol === 'blocked'
+        ? document.getElementById('blocked-column')
+        : document.querySelector('.column[data-status="' + this.boardCol + '"]');
+      if (!col) return 0;
+      return col.querySelectorAll('.card-tile').length;
+    },
+
+    boardScopeKey() {
+      return this.viewMode === 'agent' ? 'a:' + this.currentAgent : 'p:' + this.currentProject;
+    },
+
+    boardPagerStep(delta) {
+      const order = this.boardPagerStatuses();
+      const idx = Math.max(0, order.indexOf(this.boardCol));
+      const next = order[Math.min(order.length - 1, Math.max(0, idx + delta))];
+      this.scrollBoardToColumn(next);
+    },
+
+    scrollBoardToColumn(status) {
+      const board = this.$refs.board;
+      if (!board) return;
+      const sel = status === 'blocked'
+        ? '#blocked-column'
+        : '.column[data-status="' + status + '"]';
+      const col = board.querySelector(sel);
+      if (!col) return;
+      // Optimistic: update indicator immediately so chevron taps feel instant.
+      // The IntersectionObserver will confirm or correct after the scroll lands.
+      this.boardCol = status;
+      col.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    },
+
+    initBoardPager() {
+      if (!window.matchMedia('(max-width: 640px)').matches) return;
+
+      const board = this.$refs.board;
+      if (!board) return;
+
+      // Determine landing column.
+      const key = 'kkullm-board-col:' + this.boardScopeKey();
+      const remembered = localStorage.getItem(key);
+      let landing;
+      if (remembered) {
+        landing = remembered;
+      } else {
+        const counts = {
+          blocked: board.querySelectorAll('#blocked-cards .card-tile').length,
+          in_flight: board.querySelectorAll('[data-status="in_flight"] .card-tile').length,
+        };
+        if (counts.blocked > 0) landing = 'blocked';
+        else if (counts.in_flight > 0) landing = 'in_flight';
+        else landing = 'todo';
+      }
+      this.boardCol = landing;
+
+      // Scroll without smooth on initial landing.
+      const sel = landing === 'blocked'
+        ? '#blocked-column'
+        : '.column[data-status="' + landing + '"]';
+      const col = board.querySelector(sel);
+      if (col) col.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
+
+      // Observe which column is centered.
+      if (this._boardIO) this._boardIO.disconnect();
+      this._boardIO = new IntersectionObserver((entries) => {
+        let best = null;
+        for (const entry of entries) {
+          if (entry.intersectionRatio >= 0.6 &&
+              (!best || entry.intersectionRatio > best.intersectionRatio)) {
+            best = entry;
+          }
+        }
+        if (!best) return;
+        const col = best.target;
+        const status = col.id === 'blocked-column' ? 'blocked' : col.dataset.status;
+        if (status && status !== this.boardCol) {
+          this.boardCol = status;
+          localStorage.setItem('kkullm-board-col:' + this.boardScopeKey(), status);
+        }
+      }, { root: board, threshold: [0.6] });
+      board.querySelectorAll('.column').forEach(el => this._boardIO.observe(el));
+    },
 
     loadBoard() {
       const container = document.getElementById('board-container');
