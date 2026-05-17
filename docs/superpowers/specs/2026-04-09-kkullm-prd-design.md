@@ -297,7 +297,7 @@ The core agent interaction pattern:
 
 1. Claude Code restarts with the composed prompt.
 2. Agent calls `kkullm card update <id> --status in_flight` to claim the card.
-3. Agent works the card, calling `kkullm comment add <id> --body "..."` as work progresses.
+3. Agent works the card, calling `kkullm comment create <id> --body "..."` as work progresses.
 4. Agent calls `kkullm card update <id> --status completed` when done.
 5. Agent updates related cards as needed (unblocking, adding comments, creating sub-tasks).
 
