@@ -2541,3 +2541,64 @@ body::before {
   margin: 6px 18px;
   background: var(--hairline);
 }
+
+/* ===== Board status header (phone) ===== */
+.board-status-header {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .board-status-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: sticky;
+    top: calc(56px + env(safe-area-inset-top));
+    z-index: 40;
+    background: var(--bg-page);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--hairline);
+    font-family: var(--font-display);
+  }
+  .board-chevron {
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    color: var(--text-tertiary);
+    min-width: 36px;
+    min-height: 36px;
+    cursor: pointer;
+  }
+  .board-status-name {
+    font-size: 16px;
+    color: var(--text-primary);
+    text-transform: capitalize;
+  }
+  .board-status-count {
+    color: var(--text-tertiary);
+    font-size: 14px;
+  }
+  .board-dots {
+    margin-left: auto;
+    display: inline-flex;
+    gap: 5px;
+  }
+  .board-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--hairline);
+  }
+  .board-dot.active { background: var(--accent); }
+
+  /* Make .board into a horizontal pager */
+  .board {
+    scroll-snap-type: x mandatory;
+    scroll-padding: 12px;
+    gap: 0;
+  }
+  .board > .column {
+    flex: 0 0 calc(100% - 24px);
+    scroll-snap-align: center;
+    margin-right: 12px;
+  }
+  .board > .column:first-child { margin-left: 12px; }
+}

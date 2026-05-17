@@ -1,4 +1,21 @@
 {{define "board"}}
+<div class="board-status-header phone-only" x-show="boardLoaded" x-cloak>
+  <button type="button"
+          class="board-chevron"
+          @click="boardPagerStep(-1)"
+          aria-label="Previous column">◀</button>
+  <span class="board-status-name" x-text="boardColLabel()"></span>
+  <span class="board-status-count" x-text="'(' + boardColCount() + ')'"></span>
+  <button type="button"
+          class="board-chevron"
+          @click="boardPagerStep(1)"
+          aria-label="Next column">▶</button>
+  <span class="board-dots" aria-hidden="true">
+    <template x-for="s in boardPagerStatuses()" :key="s">
+      <span class="board-dot" :class="{ active: boardCol === s }"></span>
+    </template>
+  </span>
+</div>
 <div class="board" id="board" x-ref="board">
   {{$blocked := .BlockedCards}}
 
