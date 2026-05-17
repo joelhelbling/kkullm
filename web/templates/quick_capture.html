@@ -1,0 +1,56 @@
+{{define "quick_capture"}}
+<button class="quick-fab phone-only"
+        type="button"
+        @click="openQuickCapture()"
+        aria-label="Quick add card to Considering">
+  <svg width="24" height="24" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+    <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</button>
+
+<div class="sheet-backdrop phone-only"
+     x-show="quickCaptureOpen"
+     x-transition.opacity.duration.150ms
+     @click="quickCaptureOpen = false"
+     x-cloak></div>
+<div class="sheet quick-capture-sheet phone-only"
+     :class="{ open: quickCaptureOpen }"
+     role="dialog"
+     aria-modal="true"
+     aria-label="Add card to Considering"
+     x-cloak>
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <form class="quick-capture-form" @submit.prevent="submitQuickCapture($event)">
+    <label class="quick-capture-label" for="qc-title">Title</label>
+    <textarea id="qc-title"
+              name="title"
+              x-ref="quickCaptureTitle"
+              rows="2"
+              required
+              placeholder="What needs considering?"></textarea>
+
+    <div class="quick-capture-row">
+      <span class="quick-capture-meta-label">Project:</span>
+      <select name="project" class="quick-capture-project">
+        <template x-for="p in projects" :key="p.id">
+          <option :value="p.name" :selected="String(currentProject) === String(p.id)" x-text="p.name"></option>
+        </template>
+      </select>
+    </div>
+
+    <div class="quick-capture-row">
+      <span class="quick-capture-meta-label">Status:</span>
+      <span class="quick-capture-status">considering</span>
+    </div>
+
+    <div class="quick-capture-error" x-show="quickCaptureError" x-text="quickCaptureError"></div>
+
+    <div class="quick-capture-actions">
+      <button type="button" class="btn btn-secondary" @click="quickCaptureOpen = false">Cancel</button>
+      <button type="submit" class="btn btn-primary" :disabled="quickCaptureBusy">
+        <span x-text="quickCaptureBusy ? 'Adding…' : 'Add card'"></span>
+      </button>
+    </div>
+  </form>
+</div>
+{{end}}
