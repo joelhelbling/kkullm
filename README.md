@@ -76,6 +76,21 @@ This is current thinking, not a commitment.
 
 **Longer-term, under consideration.** Agent-to-agent messaging patterns. An RFC card type for open or targeted requests for comment. Cross-project card views.
 
+## Claude Code plugin
+
+This repository is also a Claude Code plugin marketplace. The `kkullm` plugin
+ships a `/kkullm:cli` skill that teaches the purpose and conventions of the
+`kkullm` CLI.
+
+```
+/plugin marketplace add joelhelbling/kkullm
+/plugin install kkullm@kkullm
+/reload-plugins
+```
+
+Once installed, invoke `/kkullm:cli`, or let Claude activate it automatically
+when it detects kkullm CLI work.
+
 ## Contributing
 
 Kkullm is early. Issues and discussions are welcome. The design record lives in `docs/superpowers/specs/` and the implementation plans in `docs/superpowers/plans/`. The stack is Go and SQLite. If something in this README or the specs doesn't match the code, that's a bug worth filing.
