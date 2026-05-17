@@ -53,6 +53,61 @@ function kkullm() {
           this.updateBlockerCount();
         }
       });
+
+      this.initPicker();
+    },
+
+    initPicker() {
+      const saved = localStorage.getItem('kkullm-picker-page');
+      if (saved === 'projects' || saved === 'agents') {
+        this.pickerPage = saved;
+      }
+      this.$watch('pickerOpen', (open) => {
+        if (open) this.$nextTick(() => this.syncPickerScroll());
+      });
+      this.$watch('pickerPage', (page) => {
+        localStorage.setItem('kkullm-picker-page', page);
+      });
+      // Track horizontal scroll position to keep pickerPage in sync with swipe.
+      this.$nextTick(() => {
+        const container = this.$refs.pickerPages;
+        if (!container) return;
+        const io = new IntersectionObserver((entries) => {
+          for (const entry of entries) {
+            if (entry.intersectionRatio >= 0.6) {
+              const page = entry.target.dataset.page;
+              if (page && page !== this.pickerPage) this.pickerPage = page;
+            }
+          }
+        }, { root: container, threshold: [0.6] });
+        container.querySelectorAll('.picker-page').forEach(el => io.observe(el));
+      });
+    },
+
+    setPickerPage(page) {
+      this.pickerPage = page;
+      this.$nextTick(() => this.syncPickerScroll());
+    },
+
+    syncPickerScroll() {
+      const container = this.$refs.pickerPages;
+      if (!container) return;
+      const target = container.querySelector('[data-page="' + this.pickerPage + '"]');
+      if (target) target.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    },
+
+    selectProject(id) {
+      this.viewMode = 'project';
+      this.currentProject = String(id);
+      this.pickerOpen = false;
+      this.loadBoard();
+    },
+
+    selectAgent(id) {
+      this.viewMode = 'agent';
+      this.currentAgent = String(id);
+      this.pickerOpen = false;
+      this.loadBoard();
     },
 
     bootstrapData() {
