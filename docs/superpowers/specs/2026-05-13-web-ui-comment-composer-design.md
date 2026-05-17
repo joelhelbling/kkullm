@@ -7,7 +7,7 @@
 
 The web UI's card drawer displays comments but offers no way to add one.
 Comment creation is fully implemented in the store, HTTP/JSON API, and CLI
-(`kkullm comment add`), so the gap is purely in the server-rendered web UI.
+(`kkullm comment create`), so the gap is purely in the server-rendered web UI.
 
 ## Goals
 
