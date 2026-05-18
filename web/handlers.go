@@ -106,6 +106,44 @@ func renderError(w http.ResponseWriter, code int, publicMsg string, err error) {
 	http.Error(w, publicMsg, code)
 }
 
+// defaultProjectID returns the id of the first project in storage, used when
+// a request omits ?project=. Returns 0 (and no error) if no projects exist,
+// letting the caller decide how to respond.
+func (ws *WebServer) defaultProjectID() (int, error) {
+	projects, err := ws.store.ListProjects()
+	if err != nil {
+		return 0, err
+	}
+	if len(projects) == 0 {
+		return 0, nil
+	}
+	return projects[0].ID, nil
+}
+
+// resolveProjectID parses the ?project= query value, falling back to the
+// first project when empty. On any failure it writes the HTTP error and
+// returns ok=false so the caller can return without further response writes.
+func (ws *WebServer) resolveProjectID(w http.ResponseWriter, raw string) (int, bool) {
+	if raw == "" {
+		id, err := ws.defaultProjectID()
+		if err != nil {
+			renderError(w, 500, "internal error", err)
+			return 0, false
+		}
+		if id == 0 {
+			renderError(w, 404, "no projects available", nil)
+			return 0, false
+		}
+		return id, true
+	}
+	id, err := strconv.Atoi(raw)
+	if err != nil {
+		http.Error(w, "invalid project id", 400)
+		return 0, false
+	}
+	return id, true
+}
+
 func initTemplates() {
 	var err error
 	tmpl, err = template.New("").Funcs(funcMap).ParseFS(content, "templates/*.html")
@@ -347,13 +385,8 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 		cards, err = ws.store.ListCards(store.CardListParams{Assignee: agent.Name, ArchiveLimit: webArchiveLimit})
 		showProject = true
 	} else {
-		projectID := r.URL.Query().Get("project")
-		if projectID == "" {
-			projectID = "1"
-		}
-		id, parseErr := strconv.Atoi(projectID)
-		if parseErr != nil {
-			http.Error(w, "invalid project id", 400)
+		id, ok := ws.resolveProjectID(w, r.URL.Query().Get("project"))
+		if !ok {
 			return
 		}
 		project, projErr := ws.store.GetProject(id)
@@ -421,13 +454,8 @@ func (ws *WebServer) handleArchived(w http.ResponseWriter, r *http.Request) {
 		boardURL = "/ui/board?agent=" + strconv.Itoa(id)
 		showProject = true
 	} else {
-		projectID := r.URL.Query().Get("project")
-		if projectID == "" {
-			projectID = "1"
-		}
-		id, parseErr := strconv.Atoi(projectID)
-		if parseErr != nil {
-			http.Error(w, "invalid project id", 400)
+		id, ok := ws.resolveProjectID(w, r.URL.Query().Get("project"))
+		if !ok {
 			return
 		}
 		project, projErr := ws.store.GetProject(id)
