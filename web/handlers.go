@@ -349,13 +349,11 @@ func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) 
 
 	ws.events.Publish(api.Event{Type: "card_updated", Data: card})
 
-	// Decide response format based on the htmx target header.
-	// When the click came from the drawer's status selector, htmx sets
-	// HX-Target to "drawer-container" (the id of the target element).
-	// When the click came from drag-and-drop on the board, we don't
-	// target the drawer — return just the updated card tile.
-	hxTarget := r.Header.Get("HX-Target")
-	if hxTarget == "drawer-container" {
+	// Callers tell us which fragment they want via an explicit ?response=
+	// hint, decoupled from any DOM id. The drawer's status pills pass
+	// ?response=drawer; drag-and-drop on the board passes nothing and
+	// gets back just the updated card tile.
+	if r.URL.Query().Get("response") == "drawer" {
 		ws.renderDrawer(w, card, "")
 		return
 	}

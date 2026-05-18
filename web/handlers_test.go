@@ -189,6 +189,58 @@ func TestStatusChange(t *testing.T) {
 	if updated.Status != "todo" {
 		t.Errorf("expected status 'todo', got %q", updated.Status)
 	}
+
+	// Default response (no ?response= param) is the card-tile fragment,
+	// used by board drag-and-drop. Must NOT be the full drawer.
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+	if !strings.Contains(body, "card-tile") {
+		t.Errorf("expected card-tile fragment by default, got: %s", body)
+	}
+	if strings.Contains(body, "drawer-top") {
+		t.Errorf("did not expect drawer fragment by default, got: %s", body)
+	}
+}
+
+func TestStatusChangeReturnsDrawerOnResponseDrawer(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Drawer response test",
+		Status:    "considering",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// The drawer's status pill includes ?response=drawer to request the
+	// drawer fragment instead of the card tile.
+	req, _ := http.NewRequest("PATCH",
+		ts.URL+fmt.Sprintf("/ui/cards/%d/status?response=drawer", card.ID),
+		strings.NewReader("status=todo"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("PATCH status: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+	if !strings.Contains(body, "drawer-top") {
+		t.Errorf("expected drawer fragment when ?response=drawer, got: %s", body)
+	}
+	if !strings.Contains(body, "drawer-section-label") {
+		t.Errorf("expected drawer sections in response, got: %s", body)
+	}
 }
 
 func TestStatusChangeInvalid(t *testing.T) {
