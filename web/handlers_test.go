@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/joelhelbling/kkullm/api"
+	"github.com/joelhelbling/kkullm/db"
 	"github.com/joelhelbling/kkullm/store"
 )
 
@@ -634,6 +636,39 @@ func TestDeleteCardFromDrawer_StaleIDIsIdempotent(t *testing.T) {
 
 	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusFound {
 		t.Fatalf("expected redirect for stale id, got %d (body: %s)", rec.Code, rec.Body.String())
+	}
+}
+
+func TestLoadBlockersSetsToastTriggerOnError(t *testing.T) {
+	database, err := db.Open(":memory:")
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	if err := db.Migrate(database); err != nil {
+		t.Fatalf("Migrate: %v", err)
+	}
+	s := store.New(database)
+	srv := api.NewServer(s)
+	ws := &WebServer{store: s, events: srv.EventBus()}
+
+	// Close the underlying DB so any subsequent query fails.
+	database.Close()
+
+	rec := httptest.NewRecorder()
+	got := ws.loadBlockers(rec)
+
+	if got != nil {
+		t.Errorf("expected nil blockers on error, got %d", len(got))
+	}
+	trigger := rec.Header().Get("HX-Trigger")
+	if trigger == "" {
+		t.Fatalf("expected HX-Trigger header to be set on error")
+	}
+	if !strings.Contains(trigger, "showToast") {
+		t.Errorf("expected HX-Trigger to fire showToast event, got %q", trigger)
+	}
+	if !strings.Contains(trigger, "blockers") {
+		t.Errorf("expected toast message to mention blockers, got %q", trigger)
 	}
 }
 

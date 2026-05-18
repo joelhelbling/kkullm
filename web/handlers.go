@@ -404,22 +404,34 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bd := groupCards(cards, showProject)
-	bd.BlockedCards = nil // blocked column is always global, not per-scope
-
-	blockedCards, blockedErr := ws.store.ListCards(store.CardListParams{
-		Status: "blocked",
-	})
-	if blockedErr != nil {
-		log.Printf("list blocked cards: %v", blockedErr)
-	}
-	for _, c := range blockedCards {
-		bd.BlockedCards = append(bd.BlockedCards, cardView{Card: c, ShowProject: true})
-	}
+	bd.BlockedCards = ws.loadBlockers(w) // global; nil on error with toast trigger set
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "board", bd); err != nil {
 		log.Printf("render board: %v", err)
 	}
+}
+
+// blockerToastTrigger is the HX-Trigger payload that asks the front-end to
+// show a non-blocking error toast when the blocker query fails. The board
+// still renders so the user keeps the rest of their work in view.
+const blockerToastTrigger = `{"showToast":{"message":"Couldn't load blockers","variant":"error"}}`
+
+// loadBlockers returns the global Blocked column. On failure it logs the
+// detail, sets an HX-Trigger header for a toast, and returns nil so the
+// board renders with an empty Blocked column.
+func (ws *WebServer) loadBlockers(w http.ResponseWriter) []cardView {
+	cards, err := ws.store.ListCards(store.CardListParams{Status: "blocked"})
+	if err != nil {
+		log.Printf("list blocked cards: %v", err)
+		w.Header().Set("HX-Trigger", blockerToastTrigger)
+		return nil
+	}
+	out := make([]cardView, 0, len(cards))
+	for _, c := range cards {
+		out = append(out, cardView{Card: c, ShowProject: true})
+	}
+	return out
 }
 
 type archivedData struct {
