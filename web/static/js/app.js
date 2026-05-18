@@ -57,6 +57,14 @@ function kkullm() {
         }
       });
 
+      // Surface server-fired HX-Trigger toasts (e.g. blocker query failures).
+      // htmx parses `HX-Trigger: {"showToast": {...}}` into a CustomEvent on
+      // the triggering element, which bubbles to body.
+      document.body.addEventListener('showToast', (e) => {
+        const d = e.detail || {};
+        if (d.message) this.showToast(d.message, d.variant);
+      });
+
       this.initPicker();
     },
 
