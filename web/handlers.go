@@ -97,6 +97,15 @@ func timeAgo(t time.Time) string {
 	}
 }
 
+// renderError writes a user-facing error response and logs the underlying
+// detail. The publicMsg is what the browser sees; err is for the server log.
+func renderError(w http.ResponseWriter, code int, publicMsg string, err error) {
+	if err != nil {
+		log.Printf("%s: %v", publicMsg, err)
+	}
+	http.Error(w, publicMsg, code)
+}
+
 func initTemplates() {
 	var err error
 	tmpl, err = template.New("").Funcs(funcMap).ParseFS(content, "templates/*.html")
@@ -161,13 +170,13 @@ func (ws *WebServer) handleRoot(w http.ResponseWriter, r *http.Request) {
 
 	projects, err := ws.store.ListProjects()
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		renderError(w, 500, "internal error", err)
 		return
 	}
 
 	agents, err := ws.store.ListAgents("")
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		renderError(w, 500, "internal error", err)
 		return
 	}
 
@@ -241,7 +250,7 @@ func buildStatusPills(current string) []statusPill {
 func (ws *WebServer) renderDrawer(w http.ResponseWriter, card *model.Card, commentError string) {
 	comments, err := ws.store.ListComments(card.ID)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		renderError(w, 500, "internal error", err)
 		return
 	}
 	if comments == nil {
@@ -267,7 +276,7 @@ func (ws *WebServer) handleDrawer(w http.ResponseWriter, r *http.Request) {
 
 	card, err := ws.store.GetCard(id)
 	if err != nil {
-		http.Error(w, err.Error(), 404)
+		renderError(w, 404, "card not found", err)
 		return
 	}
 
@@ -332,7 +341,7 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 		}
 		agent, agentErr := ws.store.GetAgent(id)
 		if agentErr != nil {
-			http.Error(w, agentErr.Error(), 404)
+			renderError(w, 404, "agent not found", agentErr)
 			return
 		}
 		cards, err = ws.store.ListCards(store.CardListParams{Assignee: agent.Name, ArchiveLimit: webArchiveLimit})
@@ -349,7 +358,7 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 		}
 		project, projErr := ws.store.GetProject(id)
 		if projErr != nil {
-			http.Error(w, projErr.Error(), 404)
+			renderError(w, 404, "project not found", projErr)
 			return
 		}
 		cards, err = ws.store.ListCards(store.CardListParams{Project: project.Name, ArchiveLimit: webArchiveLimit})
@@ -357,7 +366,7 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		renderError(w, 500, "internal error", err)
 		return
 	}
 
@@ -404,7 +413,7 @@ func (ws *WebServer) handleArchived(w http.ResponseWriter, r *http.Request) {
 		}
 		agent, agentErr := ws.store.GetAgent(id)
 		if agentErr != nil {
-			http.Error(w, agentErr.Error(), 404)
+			renderError(w, 404, "agent not found", agentErr)
 			return
 		}
 		params.Assignee = agent.Name
@@ -423,7 +432,7 @@ func (ws *WebServer) handleArchived(w http.ResponseWriter, r *http.Request) {
 		}
 		project, projErr := ws.store.GetProject(id)
 		if projErr != nil {
-			http.Error(w, projErr.Error(), 404)
+			renderError(w, 404, "project not found", projErr)
 			return
 		}
 		params.Project = project.Name
@@ -433,7 +442,7 @@ func (ws *WebServer) handleArchived(w http.ResponseWriter, r *http.Request) {
 
 	cards, err := ws.store.ListCards(params)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		renderError(w, 500, "internal error", err)
 		return
 	}
 
@@ -463,7 +472,7 @@ func (ws *WebServer) handleAddComment(w http.ResponseWriter, r *http.Request) {
 
 	card, err := ws.store.GetCard(id)
 	if err != nil {
-		http.Error(w, err.Error(), 404)
+		renderError(w, 404, "card not found", err)
 		return
 	}
 
@@ -486,7 +495,7 @@ func (ws *WebServer) handleAddComment(w http.ResponseWriter, r *http.Request) {
 
 	comment, err := ws.store.CreateComment(card.ID, agent.ID, body)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		renderError(w, 500, "internal error", err)
 		return
 	}
 
@@ -506,7 +515,7 @@ func (ws *WebServer) handleDeleteCard(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
-		http.Error(w, err.Error(), 500)
+		renderError(w, 500, "internal error", err)
 		return
 	}
 	ws.broadcastCardDeleted(id)
@@ -522,7 +531,7 @@ func (ws *WebServer) handleBlockers(w http.ResponseWriter, r *http.Request) {
 		Status: "blocked",
 	})
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		renderError(w, 500, "internal error", err)
 		return
 	}
 
