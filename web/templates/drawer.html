@@ -23,7 +23,7 @@
       {{range .StatusPills}}
       {{if .Reachable}}
       <span class="status-pill"
-            hx-patch="/ui/cards/{{$.Card.ID}}/status"
+            hx-patch="/ui/cards/{{$.Card.ID}}/status?response=drawer"
             hx-vals='{"status":"{{.Status}}"}'
             hx-target="#drawer-container"
             hx-swap="innerHTML">{{.Status}}</span>
