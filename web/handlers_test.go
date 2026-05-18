@@ -637,6 +637,46 @@ func TestDeleteCardFromDrawer_StaleIDIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestBoardDefaultsToFirstProjectWhenIDOneMissing(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	// Create a second project, then delete the seeded orchestration project (id 1).
+	// An empty ?project= query should still resolve to a working board, not 404.
+	other, err := st.CreateProject("other", "second project")
+	if err != nil {
+		t.Fatalf("CreateProject: %v", err)
+	}
+	if err := st.DeleteProject(1); err != nil {
+		t.Fatalf("DeleteProject: %v", err)
+	}
+
+	if _, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Card in other project",
+		Status:    "todo",
+		ProjectID: other.ID,
+	}); err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/ui/board")
+	if err != nil {
+		t.Fatalf("GET /ui/board: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		buf, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 200 with id-1 absent, got %d: %s", resp.StatusCode, string(buf))
+	}
+	buf, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(buf), "Card in other project") {
+		t.Errorf("expected board to render cards from fallback project")
+	}
+}
+
 func TestDrawerBadIDDoesNotLeakDBError(t *testing.T) {
 	mux := setupTestMux(t)
 	ts := httptest.NewServer(mux)
