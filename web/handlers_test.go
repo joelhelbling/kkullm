@@ -637,6 +637,30 @@ func TestDeleteCardFromDrawer_StaleIDIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestDrawerBadIDDoesNotLeakDBError(t *testing.T) {
+	mux := setupTestMux(t)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/ui/cards/99999/drawer")
+	if err != nil {
+		t.Fatalf("GET drawer: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 404 {
+		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	}
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+	if strings.Contains(body, "sql:") || strings.Contains(body, "no rows") {
+		t.Errorf("response leaks raw DB error to client: %q", body)
+	}
+	if !strings.Contains(strings.ToLower(body), "not found") {
+		t.Errorf("expected friendly 'not found' message, got %q", body)
+	}
+}
+
 func TestDrawerHasThreeRowStructure(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
