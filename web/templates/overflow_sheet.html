@@ -7,6 +7,7 @@
 <div class="sheet overflow-sheet phone-only"
      :class="{ open: overflowOpen }"
      role="menu"
+     :aria-hidden="!overflowOpen"
      aria-label="Menu"
      x-cloak>
   <div class="sheet-handle" aria-hidden="true"></div>

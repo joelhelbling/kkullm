@@ -147,6 +147,9 @@ function kkullm() {
       const inField = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
 
       if (e.key === 'Escape') {
+        if (this.quickCaptureOpen) { this.quickCaptureOpen = false; return; }
+        if (this.pickerOpen) { this.pickerOpen = false; return; }
+        if (this.overflowOpen) { this.overflowOpen = false; return; }
         if (this.composeOpen) { this.closeCompose(); return; }
         if (this.drawerOpen) { this.closeDrawer(); return; }
         return;

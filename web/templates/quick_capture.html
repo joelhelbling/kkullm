@@ -16,7 +16,8 @@
 <div class="sheet quick-capture-sheet phone-only"
      :class="{ open: quickCaptureOpen }"
      role="dialog"
-     aria-modal="true"
+     :aria-modal="quickCaptureOpen"
+     :aria-hidden="!quickCaptureOpen"
      aria-label="Add card to Considering"
      x-cloak>
   <div class="sheet-handle" aria-hidden="true"></div>

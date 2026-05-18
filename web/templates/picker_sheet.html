@@ -7,7 +7,8 @@
 <div class="sheet picker-sheet phone-only"
      :class="{ open: pickerOpen }"
      role="dialog"
-     aria-modal="true"
+     :aria-modal="pickerOpen"
+     :aria-hidden="!pickerOpen"
      aria-label="Choose project or agent"
      x-cloak>
   <div class="sheet-handle" aria-hidden="true"></div>
