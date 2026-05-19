@@ -65,6 +65,15 @@ function kkullm() {
         if (d.message) this.showToast(d.message, d.variant);
       });
 
+      // htmx fires `htmx:responseError` for any non-2xx response. Without a
+      // listener, refreshBlockers / loadBoard / drawer fetches that 500 leave
+      // stale DOM with no user-visible cue. Surface a toast so the user
+      // knows something went wrong.
+      document.body.addEventListener('htmx:responseError', (e) => {
+        const status = e.detail && e.detail.xhr ? e.detail.xhr.status : '';
+        this.showToast('Request failed' + (status ? ' (' + status + ')' : ''), 'error');
+      });
+
       this.initPicker();
     },
 
@@ -675,11 +684,36 @@ function kkullm() {
       };
     },
 
+    // isCardInScope returns true when an SSE card payload belongs in the
+    // currently-viewed board. Blocked cards are always in scope since the
+    // Blocked column is global.
+    isCardInScope(card) {
+      if (card.status === 'blocked') return true;
+      if (this.viewMode === 'project') {
+        const p = this.projects.find((p) => String(p.id) === String(this.currentProject));
+        return !!p && card.project === p.name;
+      }
+      if (this.viewMode === 'agent') {
+        const a = this.agents.find((a) => String(a.id) === String(this.currentAgent));
+        return !!a && (card.assignees || []).includes(a.name);
+      }
+      return true;
+    },
+
     handleCardCreated(card) {
+      // Don't reload mid-drag — SortableJS state would be clobbered.
+      if (window.Sortable && Sortable.active) return;
+      // Skip events for cards outside the current scope (other project or
+      // unassigned to current agent). Blocked cards always pass the filter.
+      if (!this.isCardInScope(card)) return;
       this.loadBoard();
     },
 
     handleCardUpdated(card) {
+      // Skip mid-drag SSE-driven DOM mutations — the in-flight drag will
+      // PATCH on drop and reconcile via the response.
+      if (window.Sortable && Sortable.active) return;
+
       const cardEl = document.querySelector('[data-card-id="' + card.id + '"]');
       if (!cardEl) {
         this.loadBoard();
