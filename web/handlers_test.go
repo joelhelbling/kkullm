@@ -274,6 +274,45 @@ func TestStatusChangeInvalid(t *testing.T) {
 	}
 }
 
+func TestBoardRejectsBadIDs(t *testing.T) {
+	cases := []struct {
+		name   string
+		query  string
+		status int
+	}{
+		{"unparseable project", "?project=abc", 400},
+		{"missing project", "?project=999", 404},
+		{"unparseable agent", "?agent=abc", 400},
+		{"missing agent", "?agent=999", 404},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mux := setupTestMux(t)
+			ts := httptest.NewServer(mux)
+			defer ts.Close()
+
+			resp, err := http.Get(ts.URL + "/ui/board" + tc.query)
+			if err != nil {
+				t.Fatalf("GET /ui/board%s: %v", tc.query, err)
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != tc.status {
+				buf, _ := io.ReadAll(resp.Body)
+				t.Fatalf("expected %d, got %d: %s", tc.status, resp.StatusCode, string(buf))
+			}
+
+			// #5 invariant: the response must not leak raw DB error strings.
+			buf, _ := io.ReadAll(resp.Body)
+			body := string(buf)
+			if strings.Contains(body, "sql:") || strings.Contains(body, "no rows") {
+				t.Errorf("response leaks raw DB error: %q", body)
+			}
+		})
+	}
+}
+
 func TestBoardAgentScoped(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
@@ -541,7 +580,10 @@ func TestFullFlow(t *testing.T) {
 	}
 
 	// 5. Verify card is now in todo
-	updated, _ := st.GetCard(card.ID)
+	updated, err := st.GetCard(card.ID)
+	if err != nil {
+		t.Fatalf("GetCard: %v", err)
+	}
 	if updated.Status != "todo" {
 		t.Errorf("expected status 'todo', got %q", updated.Status)
 	}
