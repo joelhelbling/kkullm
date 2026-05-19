@@ -830,6 +830,39 @@ func TestDrawerBadIDDoesNotLeakDBError(t *testing.T) {
 	}
 }
 
+func TestDrawerCarriesDataCardID(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Identifiable drawer",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(fmt.Sprintf("%s/ui/cards/%d/drawer", ts.URL, card.ID))
+	if err != nil {
+		t.Fatalf("GET drawer: %v", err)
+	}
+	defer resp.Body.Close()
+
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	// The JS afterSettle hook reads data-card-id off the swapped-in drawer
+	// fragment to track which card the drawer is showing — needed so SSE
+	// card_updated events can refresh the open drawer.
+	want := fmt.Sprintf(`data-card-id="%d"`, card.ID)
+	if !strings.Contains(body, want) {
+		t.Errorf("expected drawer to expose %q for the SSE refresh hook, got: %s", want, body)
+	}
+}
+
 func TestDrawerHasThreeRowStructure(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
