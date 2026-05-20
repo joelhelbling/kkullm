@@ -203,3 +203,19 @@ func TestRenderTitle_EscapesRawHTML(t *testing.T) {
 		t.Errorf("expected <script> escaped, got: %s", got)
 	}
 }
+
+func TestRender_ConcurrentSafe(t *testing.T) {
+	src := "# h\n\n**b** and `c` and [l](https://example.com)\n\n- [x] done\n"
+	const n = 32
+	done := make(chan struct{}, n)
+	for i := 0; i < n; i++ {
+		go func() {
+			_ = RenderBody(src)
+			_ = RenderTitle(src)
+			done <- struct{}{}
+		}()
+	}
+	for i := 0; i < n; i++ {
+		<-done
+	}
+}
