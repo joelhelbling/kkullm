@@ -78,3 +78,38 @@ func TestRenderBody_AutolinkHasTargetBlank(t *testing.T) {
 		t.Errorf("expected target=\"_blank\" on autolink, got: %s", got)
 	}
 }
+
+func TestRenderBody_ImageHTTPSAllowed(t *testing.T) {
+	got := string(RenderBody("![alt](https://example.com/x.png)"))
+	if !strings.Contains(got, `<img`) || !strings.Contains(got, `src="https://example.com/x.png"`) {
+		t.Errorf("expected https <img>, got: %s", got)
+	}
+}
+
+func TestRenderBody_ImageHTTPAllowed(t *testing.T) {
+	got := string(RenderBody("![alt](http://example.com/x.png)"))
+	if !strings.Contains(got, `<img`) {
+		t.Errorf("expected http <img>, got: %s", got)
+	}
+}
+
+func TestRenderBody_ImageDataURIDropped(t *testing.T) {
+	got := string(RenderBody("![alt](data:image/png;base64,AAAA)"))
+	if strings.Contains(got, "<img") {
+		t.Errorf("expected data: <img> to be dropped, got: %s", got)
+	}
+}
+
+func TestRenderBody_ImageJavascriptURIDropped(t *testing.T) {
+	got := string(RenderBody("![alt](javascript:alert(1))"))
+	if strings.Contains(got, "<img") {
+		t.Errorf("expected javascript: <img> to be dropped, got: %s", got)
+	}
+}
+
+func TestRenderBody_ImageRelativeDropped(t *testing.T) {
+	got := string(RenderBody("![alt](/local/x.png)"))
+	if strings.Contains(got, "<img") {
+		t.Errorf("expected relative <img> to be dropped, got: %s", got)
+	}
+}

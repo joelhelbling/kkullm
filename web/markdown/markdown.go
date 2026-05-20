@@ -7,6 +7,7 @@ package markdown
 import (
 	"bytes"
 	"html/template"
+	"strings"
 
 	"github.com/yuin/goldmark"
 	gmast "github.com/yuin/goldmark/ast"
@@ -31,6 +32,19 @@ func (linkAttrTransformer) Transform(doc *gmast.Document, _ text.Reader, _ parse
 		case *gmast.AutoLink:
 			link.SetAttributeString("target", []byte("_blank"))
 			link.SetAttributeString("rel", []byte("noopener noreferrer"))
+		case *gmast.Image:
+			dest := string(link.Destination)
+			if !isAllowedImageScheme(dest) {
+				parent := link.Parent()
+				for c := link.FirstChild(); c != nil; {
+					next := c.NextSibling()
+					link.RemoveChild(link, c)
+					parent.InsertBefore(parent, link, c)
+					c = next
+				}
+				parent.RemoveChild(parent, link)
+				return gmast.WalkContinue, nil
+			}
 		}
 		return gmast.WalkContinue, nil
 	})
@@ -52,6 +66,10 @@ var bodyRenderer = goldmark.New(
 		html.WithXHTML(),
 	),
 )
+
+func isAllowedImageScheme(dest string) bool {
+	return strings.HasPrefix(dest, "https://") || strings.HasPrefix(dest, "http://")
+}
 
 // RenderBody renders full markdown to safe HTML. Used for card bodies and
 // comment bodies.
