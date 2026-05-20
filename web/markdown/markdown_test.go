@@ -165,8 +165,8 @@ func TestRenderTitle_ListFlattens(t *testing.T) {
 
 func TestRenderTitle_CodeBlockFlattens(t *testing.T) {
 	got := string(RenderTitle("```\ncode\n```"))
-	if strings.Contains(got, "<pre>") || strings.Contains(got, "<code") && strings.Contains(got, "<pre") {
-		t.Errorf("expected no <pre>, got: %s", got)
+	if strings.Contains(got, "<pre") || strings.Contains(got, "<code") {
+		t.Errorf("expected no <pre>/<code>, got: %s", got)
 	}
 }
 
