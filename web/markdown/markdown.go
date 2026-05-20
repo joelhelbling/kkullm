@@ -9,9 +9,32 @@ import (
 	"html/template"
 
 	"github.com/yuin/goldmark"
+	gmast "github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 )
+
+type linkAttrTransformer struct{}
+
+func (linkAttrTransformer) Transform(doc *gmast.Document, _ text.Reader, _ parser.Context) {
+	_ = gmast.Walk(doc, func(n gmast.Node, entering bool) (gmast.WalkStatus, error) {
+		if !entering {
+			return gmast.WalkContinue, nil
+		}
+		switch link := n.(type) {
+		case *gmast.Link:
+			link.SetAttributeString("target", []byte("_blank"))
+			link.SetAttributeString("rel", []byte("noopener noreferrer"))
+		case *gmast.AutoLink:
+			link.SetAttributeString("target", []byte("_blank"))
+			link.SetAttributeString("rel", []byte("noopener noreferrer"))
+		}
+		return gmast.WalkContinue, nil
+	})
+}
 
 var bodyRenderer = goldmark.New(
 	goldmark.WithExtensions(
@@ -19,6 +42,11 @@ var bodyRenderer = goldmark.New(
 		extension.Strikethrough,
 		extension.Linkify,
 		extension.TaskList,
+	),
+	goldmark.WithParserOptions(
+		parser.WithASTTransformers(
+			util.Prioritized(linkAttrTransformer{}, 100),
+		),
 	),
 	goldmark.WithRendererOptions(
 		html.WithXHTML(),

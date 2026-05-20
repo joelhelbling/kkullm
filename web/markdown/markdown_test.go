@@ -61,3 +61,20 @@ func TestRenderBody_EscapesInlineHTML(t *testing.T) {
 		t.Errorf("expected raw <b> to be escaped, got: %s", got)
 	}
 }
+
+func TestRenderBody_LinkHasTargetBlank(t *testing.T) {
+	got := string(RenderBody("[docs](https://example.com)"))
+	if !strings.Contains(got, `target="_blank"`) {
+		t.Errorf("expected target=\"_blank\" on link, got: %s", got)
+	}
+	if !strings.Contains(got, `rel="noopener noreferrer"`) {
+		t.Errorf("expected rel=\"noopener noreferrer\" on link, got: %s", got)
+	}
+}
+
+func TestRenderBody_AutolinkHasTargetBlank(t *testing.T) {
+	got := string(RenderBody("see https://example.com"))
+	if !strings.Contains(got, `target="_blank"`) {
+		t.Errorf("expected target=\"_blank\" on autolink, got: %s", got)
+	}
+}
