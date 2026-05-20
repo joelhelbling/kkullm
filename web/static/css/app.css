@@ -1118,7 +1118,7 @@ body::before {
 
 /* ===== Comments ===== */
 .comment {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
   padding-left: 12px;
   border-left: 2px solid var(--border);
 }
@@ -1155,9 +1155,9 @@ body::before {
 }
 
 .comment-body {
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--text-primary);
-  line-height: 1.5;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
