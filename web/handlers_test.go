@@ -235,7 +235,7 @@ func TestStatusChangeReturnsDrawerOnResponseDrawer(t *testing.T) {
 
 	buf, _ := io.ReadAll(resp.Body)
 	body := string(buf)
-	if !strings.Contains(body, "drawer-top") {
+	if !strings.Contains(body, "drawer-header") {
 		t.Errorf("expected drawer fragment when ?response=drawer, got: %s", body)
 	}
 	if !strings.Contains(body, "drawer-section-label") {
@@ -890,17 +890,17 @@ func TestDrawerHasThreeRowStructure(t *testing.T) {
 	}
 	body := string(bodyBytes)
 
-	for _, cls := range []string{"drawer-top", "drawer-comments", "drawer-composer"} {
+	for _, cls := range []string{"drawer-header", "drawer-scroll-wrap", "drawer-composer"} {
 		if !strings.Contains(body, cls) {
 			t.Errorf("expected rendered drawer to contain class %q, got: %s", cls, body)
 		}
 	}
 
-	topIdx := strings.Index(body, "drawer-top")
-	commentsIdx := strings.Index(body, "drawer-comments")
+	headerIdx := strings.Index(body, "drawer-header")
+	scrollIdx := strings.Index(body, "drawer-scroll-wrap")
 	composerIdx := strings.Index(body, "drawer-composer")
-	if !(topIdx < commentsIdx && commentsIdx < composerIdx) {
-		t.Errorf("expected drawer-top < drawer-comments < drawer-composer in source order; got %d < %d < %d", topIdx, commentsIdx, composerIdx)
+	if !(headerIdx < scrollIdx && scrollIdx < composerIdx) {
+		t.Errorf("expected drawer-header < drawer-scroll-wrap < drawer-composer in source order; got %d < %d < %d", headerIdx, scrollIdx, composerIdx)
 	}
 
 	listOpen := strings.Index(body, `id="comments-list"`)
