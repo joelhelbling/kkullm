@@ -1,4 +1,11 @@
 {{define "board"}}
+{{with .Project}}{{if .Description}}
+<aside class="project-intro" data-project-id="{{.ID}}" aria-label="About this project">
+  <span class="project-intro-label" aria-hidden="true">{{.Name}}</span>
+  <span class="project-intro-rule" aria-hidden="true"></span>
+  <p class="project-intro-text">{{.Description}}</p>
+</aside>
+{{end}}{{end}}
 <div class="board-status-header phone-only" x-show="boardLoaded" x-cloak>
   <button type="button"
           class="board-chevron"
