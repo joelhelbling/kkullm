@@ -47,3 +47,17 @@ func TestRenderBody_Autolink(t *testing.T) {
 		t.Errorf("expected autolink, got: %s", got)
 	}
 }
+
+func TestRenderBody_StripsScriptTag(t *testing.T) {
+	got := string(RenderBody("<script>alert(1)</script>"))
+	if strings.Contains(got, "<script>") {
+		t.Errorf("expected <script> to be escaped or dropped, got: %s", got)
+	}
+}
+
+func TestRenderBody_EscapesInlineHTML(t *testing.T) {
+	got := string(RenderBody("a <b>bold?</b> word"))
+	if strings.Contains(got, "<b>bold?</b>") {
+		t.Errorf("expected raw <b> to be escaped, got: %s", got)
+	}
+}
