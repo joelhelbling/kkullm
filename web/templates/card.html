@@ -9,7 +9,7 @@
     <span class="project-badge" style="background:{{projectColor .Project}};color:white;">{{.Project}}</span>
   </div>
   {{end}}
-  <div class="card-tile-title">{{.Title}}</div>
+  <div class="card-tile-title kk-md kk-md-title">{{renderTitle .Title}}</div>
   {{if .Tags}}
   <div class="card-tile-tags">
     {{range .Tags}}
