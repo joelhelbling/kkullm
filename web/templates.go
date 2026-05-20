@@ -6,6 +6,8 @@ import (
 	"log"
 	"strings"
 	"time"
+
+	"github.com/joelhelbling/kkullm/web/markdown"
 )
 
 var tmpl *template.Template
@@ -16,6 +18,8 @@ var funcMap = template.FuncMap{
 	"tagColor":     tagColor,
 	"joinStrings":  joinStrings,
 	"timeAgo":      timeAgo,
+	"renderBody":   markdown.RenderBody,
+	"renderTitle":  markdown.RenderTitle,
 }
 
 func initTemplates() {
