@@ -235,7 +235,7 @@ func TestStatusChangeReturnsDrawerOnResponseDrawer(t *testing.T) {
 
 	buf, _ := io.ReadAll(resp.Body)
 	body := string(buf)
-	if !strings.Contains(body, "drawer-top") {
+	if !strings.Contains(body, "drawer-header") {
 		t.Errorf("expected drawer fragment when ?response=drawer, got: %s", body)
 	}
 	if !strings.Contains(body, "drawer-section-label") {
@@ -890,17 +890,17 @@ func TestDrawerHasThreeRowStructure(t *testing.T) {
 	}
 	body := string(bodyBytes)
 
-	for _, cls := range []string{"drawer-top", "drawer-comments", "drawer-composer"} {
+	for _, cls := range []string{"drawer-header", "drawer-scroll-wrap", "drawer-composer"} {
 		if !strings.Contains(body, cls) {
 			t.Errorf("expected rendered drawer to contain class %q, got: %s", cls, body)
 		}
 	}
 
-	topIdx := strings.Index(body, "drawer-top")
-	commentsIdx := strings.Index(body, "drawer-comments")
+	headerIdx := strings.Index(body, "drawer-header")
+	scrollIdx := strings.Index(body, "drawer-scroll-wrap")
 	composerIdx := strings.Index(body, "drawer-composer")
-	if !(topIdx < commentsIdx && commentsIdx < composerIdx) {
-		t.Errorf("expected drawer-top < drawer-comments < drawer-composer in source order; got %d < %d < %d", topIdx, commentsIdx, composerIdx)
+	if !(headerIdx < scrollIdx && scrollIdx < composerIdx) {
+		t.Errorf("expected drawer-header < drawer-scroll-wrap < drawer-composer in source order; got %d < %d < %d", headerIdx, scrollIdx, composerIdx)
 	}
 
 	listOpen := strings.Index(body, `id="comments-list"`)
@@ -910,5 +910,57 @@ func TestDrawerHasThreeRowStructure(t *testing.T) {
 	listSegment := body[listOpen:composerIdx]
 	if strings.Contains(listSegment, "drawer-composer") {
 		t.Errorf("drawer-composer should be a sibling of, not nested inside, the comments list")
+	}
+}
+
+func TestDrawerRendersMarkdownBody(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Markdown body test",
+		Body:      "Hello **world** with `code` and a <script>",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + fmt.Sprintf("/ui/cards/%d/drawer", card.ID))
+	if err != nil {
+		t.Fatalf("GET drawer: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	if !strings.Contains(body, "<strong>world</strong>") {
+		t.Errorf("expected rendered bold: <strong>world</strong>; got: %s", body)
+	}
+	if !strings.Contains(body, "<code>code</code>") {
+		t.Errorf("expected rendered inline code: <code>code</code>; got: %s", body)
+	}
+	// The drawer template has its own <script> block for scroll shadows; we must
+	// check that the raw <script> from user content was stripped. We do this by
+	// confirming the drawer-body section does not contain a <script> tag.
+	drawerBodyStart := strings.Index(body, `class="drawer-body`)
+	if drawerBodyStart < 0 {
+		t.Fatal("could not find drawer-body in response")
+	}
+	drawerBodyEnd := strings.Index(body[drawerBodyStart:], "</div>")
+	if drawerBodyEnd < 0 {
+		t.Fatal("could not find end of drawer-body div")
+	}
+	drawerBodySection := body[drawerBodyStart : drawerBodyStart+drawerBodyEnd]
+	if strings.Contains(drawerBodySection, "<script>") {
+		t.Errorf("expected raw <script> to be stripped from drawer body, but it was present in: %s", drawerBodySection)
 	}
 }

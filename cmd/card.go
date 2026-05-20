@@ -59,13 +59,8 @@ var cardListCmd = &cobra.Command{
 			return err
 		}
 
-		first := true
 		return emitList(cards, func(card model.Card) {
 			if cardListFormat == "full" {
-				if !first {
-					fmt.Println("---")
-				}
-				first = false
 				printCardFull(&card)
 				return
 			}
@@ -225,29 +220,34 @@ var cardUpdateCmd = &cobra.Command{
 // --- helpers ---
 
 func printCardFull(card *model.Card) {
-	fmt.Printf("ID:        %d\n", card.ID)
-	fmt.Printf("Title:     %s\n", card.Title)
-	fmt.Printf("Status:    %s\n", card.Status)
-	fmt.Printf("Project:   %s\n", card.Project)
-	if card.Body != "" {
-		fmt.Printf("Body:      %s\n", card.Body)
-	}
+	fmt.Println("---")
+	fmt.Printf("id: %d\n", card.ID)
+	fmt.Printf("title: %s\n", card.Title)
+	fmt.Printf("status: %s\n", card.Status)
+	fmt.Printf("project: %s\n", card.Project)
 	if len(card.Assignees) > 0 {
-		fmt.Printf("Assignees: %s\n", strings.Join(card.Assignees, ", "))
+		fmt.Printf("assignees: %s\n", strings.Join(card.Assignees, ", "))
 	}
 	if len(card.Tags) > 0 {
-		fmt.Printf("Tags:      %s\n", strings.Join(card.Tags, ", "))
+		fmt.Printf("tags: %s\n", strings.Join(card.Tags, ", "))
 	}
 	if len(card.Relations) > 0 {
+		parts := make([]string, 0, len(card.Relations))
 		for _, r := range card.Relations {
-			fmt.Printf("Relation:  %s #%d\n", r.RelationType, r.RelatedCardID)
+			parts = append(parts, fmt.Sprintf("%s #%d", r.RelationType, r.RelatedCardID))
 		}
+		fmt.Printf("relations: %s\n", strings.Join(parts, ", "))
 	}
 	if card.CommentCount > 0 {
-		fmt.Printf("Comments:  %d\n", card.CommentCount)
+		fmt.Printf("comment_count: %d\n", card.CommentCount)
 	}
-	fmt.Printf("Created:   %s\n", card.CreatedAt.Format("2006-01-02 15:04:05"))
-	fmt.Printf("Updated:   %s\n", card.UpdatedAt.Format("2006-01-02 15:04:05"))
+	fmt.Printf("created_at: %s\n", card.CreatedAt.Format("2006-01-02 15:04:05"))
+	fmt.Printf("updated_at: %s\n", card.UpdatedAt.Format("2006-01-02 15:04:05"))
+	fmt.Println("---")
+	if card.Body != "" {
+		fmt.Println()
+		fmt.Println(card.Body)
+	}
 }
 
 func buildRelations(blockedBy, belongsTo, interestedIn []int) []model.CardRelation {

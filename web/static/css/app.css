@@ -1118,7 +1118,7 @@ body::before {
 
 /* ===== Comments ===== */
 .comment {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
   padding-left: 12px;
   border-left: 2px solid var(--border);
 }
@@ -1155,9 +1155,9 @@ body::before {
 }
 
 .comment-body {
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--text-primary);
-  line-height: 1.5;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
@@ -1399,9 +1399,9 @@ body::before {
   width: 100%;
   resize: vertical;
   font: inherit;
-  font-family: var(--font-body);
-  font-size: 13.5px;
-  line-height: 1.5;
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  line-height: 1.45;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -1448,44 +1448,32 @@ body::before {
   letter-spacing: 0.02em;
 }
 
-/* ===== Drawer three-row layout ===== */
-.drawer-top {
-  flex: 0 1 auto;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
-}
-
-.drawer-comments {
-  flex: 1 1 0;
-  min-height: 140px;
-  padding: 16px 28px 0;
-  border-top: 1px solid var(--hairline);
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-page-2);
-}
-
-.drawer-comments-label {
-  flex: 0 0 auto;
-  margin-bottom: 10px;
-}
-
-.drawer-comments-scroll-wrap {
+/* ===== Drawer three-row layout: header + single scroll + composer ===== */
+.drawer-scroll-wrap {
   flex: 1 1 0;
   position: relative;
   min-height: 0;
   overflow: hidden;
 }
 
-.drawer-comments-scroll {
+.drawer-scroll {
   position: absolute;
   inset: 0;
   overflow-y: auto;
   padding-bottom: 12px;
-  padding-right: 4px;
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
+}
+
+.drawer-comments-section {
+  border-top: 1px solid var(--hairline);
+  background: var(--bg-page-2);
+  margin-top: 8px;
+}
+
+.drawer-empty-comments {
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .drawer-composer {
@@ -1495,7 +1483,7 @@ body::before {
   background: var(--bg-surface);
 }
 
-/* ===== Drawer comments scroll-shadows ===== */
+/* ===== Drawer scroll-shadows ===== */
 .scroll-shadow {
   position: absolute;
   left: 0;
@@ -1504,20 +1492,57 @@ body::before {
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s ease;
+  z-index: 1;
 }
 
 .scroll-shadow-top {
   top: 0;
-  background: linear-gradient(to bottom, var(--bg-page-2) 0%, var(--bg-page-2) 14%, rgba(0, 0, 0, 0) 100%);
+  background: linear-gradient(to bottom, var(--bg-surface) 0%, var(--bg-surface) 14%, rgba(0, 0, 0, 0) 100%);
 }
 
 .scroll-shadow-bottom {
   bottom: 0;
-  background: linear-gradient(to top, var(--bg-page-2) 0%, var(--bg-page-2) 14%, rgba(0, 0, 0, 0) 100%);
+  background: linear-gradient(to top, var(--bg-surface) 0%, var(--bg-surface) 14%, rgba(0, 0, 0, 0) 100%);
 }
 
-.drawer-comments-scroll-wrap.has-shadow-top .scroll-shadow-top { opacity: 1; }
-.drawer-comments-scroll-wrap.has-shadow-bottom .scroll-shadow-bottom { opacity: 1; }
+.drawer-scroll-wrap.has-shadow-top .scroll-shadow-top { opacity: 1; }
+.drawer-scroll-wrap.has-shadow-bottom .scroll-shadow-bottom { opacity: 1; }
+
+/* ===== Drawer jump buttons (scroll to top / latest) ===== */
+.drawer-jump-buttons {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.drawer-jump {
+  pointer-events: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--hairline);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12));
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.drawer-jump:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  background: var(--bg-surface-2);
+}
 
 /* ===== Compose Modal ===== */
 .compose-overlay {
@@ -1776,6 +1801,12 @@ body::before {
   resize: vertical;
   line-height: 1.5;
   min-height: 80px;
+}
+
+.compose-field textarea[name="body"] {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  line-height: 1.45;
 }
 
 .compose-field input[type="text"]:focus,

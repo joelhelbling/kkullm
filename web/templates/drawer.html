@@ -1,89 +1,87 @@
 {{define "drawer"}}
-<div class="drawer-top" data-card-id="{{.Card.ID}}">
-  <div class="drawer-header">
-    <button type="button"
-            class="drawer-back phone-only"
-            @click="closeDrawer()"
-            aria-label="Back">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-    <div>
-      <div class="drawer-card-id">#{{.Card.ID}} · {{.Card.Project}}</div>
-      <div class="drawer-title">{{.Card.Title}}</div>
-    </div>
-    <button class="drawer-close" @click="closeDrawer()">✕</button>
+<div class="drawer-header" data-card-id="{{.Card.ID}}">
+  <button type="button"
+          class="drawer-back phone-only"
+          @click="closeDrawer()"
+          aria-label="Back">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+  <div>
+    <div class="drawer-card-id">#{{.Card.ID}} · {{.Card.Project}}</div>
+    <div class="drawer-title kk-md kk-md-title">{{renderTitle .Card.Title}}</div>
   </div>
-
-  <div class="drawer-section">
-    <div class="drawer-section-label">Status</div>
-    <div class="drawer-status-pills">
-      <span class="status-pill active active-{{.Card.Status}}">{{.Card.Status}} ✓</span>
-      {{range .StatusPills}}
-      {{if .Reachable}}
-      <span class="status-pill"
-            hx-patch="/ui/cards/{{$.Card.ID}}/status?response=drawer"
-            hx-vals='{"status":"{{.Status}}"}'
-            hx-target="#drawer-container"
-            hx-swap="innerHTML">{{.Status}}</span>
-      {{else}}
-      <span class="status-pill status-pill-disabled"
-            title="Not allowed from {{$.Card.Status}}">{{.Status}}</span>
-      {{end}}
-      {{end}}
-    </div>
-  </div>
-
-  <div class="drawer-section">
-    <div class="drawer-meta">
-      <div>
-        <div class="drawer-section-label">Assignees</div>
-        <div class="drawer-meta-item">{{if .Card.Assignees}}{{joinStrings .Card.Assignees ", "}}{{else}}unassigned{{end}}</div>
-      </div>
-      <div>
-        <div class="drawer-section-label">Tags</div>
-        <div class="card-tile-tags">
-          {{range .Card.Tags}}
-          <span class="tag" style="background:{{tagBg .}};color:{{tagColor .}};">{{.}}</span>
-          {{end}}
-          {{if not .Card.Tags}}<span class="drawer-meta-item">none</span>{{end}}
-        </div>
-      </div>
-      <div>
-        <div class="drawer-section-label">Created</div>
-        <div class="drawer-meta-item">{{timeAgo .Card.CreatedAt}}</div>
-      </div>
-    </div>
-  </div>
-
-  {{if .Card.Relations}}
-  <div class="drawer-section">
-    <div class="drawer-section-label">Relations</div>
-    {{range .Card.Relations}}
-    <div class="drawer-relation">
-      <span class="drawer-relation-type">{{.RelationType}}</span>
-      <a class="drawer-relation-link"
-         hx-get="/ui/cards/{{.RelatedCardID}}/drawer"
-         hx-target="#drawer-container"
-         hx-swap="innerHTML">#{{.RelatedCardID}}</a>
-    </div>
-    {{end}}
-  </div>
-  {{end}}
-
-  {{if .Card.Body}}
-  <div class="drawer-section">
-    <div class="drawer-section-label">Description</div>
-    <div class="drawer-body">{{.Card.Body}}</div>
-  </div>
-  {{end}}
+  <button class="drawer-close" @click="closeDrawer()">✕</button>
 </div>
 
-<div class="drawer-comments">
-  <div class="drawer-section-label drawer-comments-label">Comments ({{len .Comments}})</div>
-  <div class="drawer-comments-scroll-wrap">
-    <div class="drawer-comments-scroll">
+<div class="drawer-scroll-wrap">
+  <div class="drawer-scroll">
+    <div class="drawer-section">
+      <div class="drawer-section-label">Status</div>
+      <div class="drawer-status-pills">
+        <span class="status-pill active active-{{.Card.Status}}">{{.Card.Status}} ✓</span>
+        {{range .StatusPills}}
+        {{if .Reachable}}
+        <span class="status-pill"
+              hx-patch="/ui/cards/{{$.Card.ID}}/status?response=drawer"
+              hx-vals='{"status":"{{.Status}}"}'
+              hx-target="#drawer-container"
+              hx-swap="innerHTML">{{.Status}}</span>
+        {{else}}
+        <span class="status-pill status-pill-disabled"
+              title="Not allowed from {{$.Card.Status}}">{{.Status}}</span>
+        {{end}}
+        {{end}}
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-meta">
+        <div>
+          <div class="drawer-section-label">Assignees</div>
+          <div class="drawer-meta-item">{{if .Card.Assignees}}{{joinStrings .Card.Assignees ", "}}{{else}}unassigned{{end}}</div>
+        </div>
+        <div>
+          <div class="drawer-section-label">Tags</div>
+          <div class="card-tile-tags">
+            {{range .Card.Tags}}
+            <span class="tag" style="background:{{tagBg .}};color:{{tagColor .}};">{{.}}</span>
+            {{end}}
+            {{if not .Card.Tags}}<span class="drawer-meta-item">none</span>{{end}}
+          </div>
+        </div>
+        <div>
+          <div class="drawer-section-label">Created</div>
+          <div class="drawer-meta-item">{{timeAgo .Card.CreatedAt}}</div>
+        </div>
+      </div>
+    </div>
+
+    {{if .Card.Relations}}
+    <div class="drawer-section">
+      <div class="drawer-section-label">Relations</div>
+      {{range .Card.Relations}}
+      <div class="drawer-relation">
+        <span class="drawer-relation-type">{{.RelationType}}</span>
+        <a class="drawer-relation-link"
+           hx-get="/ui/cards/{{.RelatedCardID}}/drawer"
+           hx-target="#drawer-container"
+           hx-swap="innerHTML">#{{.RelatedCardID}}</a>
+      </div>
+      {{end}}
+    </div>
+    {{end}}
+
+    {{if .Card.Body}}
+    <div class="drawer-section">
+      <div class="drawer-section-label">Description</div>
+      <div class="drawer-body kk-md">{{renderBody .Card.Body}}</div>
+    </div>
+    {{end}}
+
+    <div class="drawer-section drawer-comments-section">
+      <div class="drawer-section-label">Comments ({{len .Comments}})</div>
       <div id="comments-list">
         {{range .Comments}}
         <div class="comment">
@@ -91,16 +89,20 @@
             <span class="comment-agent{{if eq .Agent "user"}} user-agent{{end}}">{{.Agent}}</span>
             <span class="comment-time">{{timeAgo .CreatedAt}}</span>
           </div>
-          <div class="comment-body">{{.Body}}</div>
+          <div class="comment-body kk-md">{{renderBody .Body}}</div>
         </div>
         {{end}}
         {{if not .Comments}}
-        <div style="font-size:13px;color:var(--text-secondary);">No comments yet.</div>
+        <div class="drawer-empty-comments">No comments yet.</div>
         {{end}}
       </div>
     </div>
-    <div class="scroll-shadow scroll-shadow-top"></div>
-    <div class="scroll-shadow scroll-shadow-bottom"></div>
+  </div>
+  <div class="scroll-shadow scroll-shadow-top"></div>
+  <div class="scroll-shadow scroll-shadow-bottom"></div>
+  <div class="drawer-jump-buttons">
+    <button type="button" class="drawer-jump" data-jump="top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+    <button type="button" class="drawer-jump" data-jump="latest" title="Scroll to latest" aria-label="Scroll to latest">↓</button>
   </div>
 </div>
 
@@ -129,8 +131,8 @@
 </div>
 <script>
 (function() {
-  var scroll = document.querySelector('#drawer-container .drawer-comments-scroll');
-  var wrap = document.querySelector('#drawer-container .drawer-comments-scroll-wrap');
+  var wrap = document.querySelector('#drawer-container .drawer-scroll-wrap');
+  var scroll = document.querySelector('#drawer-container .drawer-scroll');
   if (!scroll || !wrap) return;
 
   function update() {
@@ -140,10 +142,38 @@
     wrap.classList.toggle('has-shadow-bottom', !atBottom);
   }
 
-  scroll.scrollTop = scroll.scrollHeight;
+  function findLatestComment() {
+    var list = scroll.querySelector('#comments-list');
+    if (!list) return null;
+    var comments = list.querySelectorAll('.comment');
+    return comments.length ? comments[comments.length - 1] : list;
+  }
+
+  // Start at the latest comment (or bottom) so newest content is in view.
+  var latest = findLatestComment();
+  if (latest) {
+    latest.scrollIntoView({ block: 'end' });
+  } else {
+    scroll.scrollTop = scroll.scrollHeight;
+  }
   update();
 
   scroll.addEventListener('scroll', update, { passive: true });
+
+  wrap.querySelectorAll('.drawer-jump').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (btn.dataset.jump === 'top') {
+        scroll.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        var target = findLatestComment();
+        if (target) {
+          target.scrollIntoView({ block: 'end', behavior: 'smooth' });
+        } else {
+          scroll.scrollTo({ top: scroll.scrollHeight, behavior: 'smooth' });
+        }
+      }
+    });
+  });
 })();
 </script>
 {{end}}
