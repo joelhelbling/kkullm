@@ -96,6 +96,7 @@ var titleParser = goldmark.New(
 	goldmark.WithExtensions(
 		extension.Strikethrough,
 		extension.Linkify, // so bare URLs still flatten cleanly
+		extension.Table,   // so GFM tables parse as table AST nodes, not raw text
 	),
 )
 
@@ -160,6 +161,67 @@ func renderTitleNode(sb *strings.Builder, n gmast.Node, src []byte) {
 		return
 	case *gmast.Image:
 		// Dropped entirely — no <img>, no alt text rendered as content.
+		return
+	case *gmast.FencedCodeBlock:
+		// Fenced code blocks store content in Lines(), not child nodes.
+		for i := 0; i < node.Lines().Len(); i++ {
+			if i > 0 {
+				sb.WriteByte(' ')
+			}
+			seg := node.Lines().At(i)
+			sb.WriteString(template.HTMLEscapeString(string(seg.Value(src))))
+		}
+		return
+	case *gmast.CodeBlock:
+		// Indented code blocks also store content in Lines().
+		for i := 0; i < node.Lines().Len(); i++ {
+			if i > 0 {
+				sb.WriteByte(' ')
+			}
+			seg := node.Lines().At(i)
+			sb.WriteString(template.HTMLEscapeString(string(seg.Value(src))))
+		}
+		return
+	}
+
+	// Table nodes from the GFM table extension.
+	switch node := n.(type) {
+	case *extast.Table:
+		// Recurse into header and rows, spacing between children.
+		first := true
+		for c := node.FirstChild(); c != nil; c = c.NextSibling() {
+			if !first {
+				sb.WriteByte(' ')
+			}
+			first = false
+			renderTitleNode(sb, c, src)
+		}
+		return
+	case *extast.TableHeader:
+		first := true
+		for c := node.FirstChild(); c != nil; c = c.NextSibling() {
+			if !first {
+				sb.WriteByte(' ')
+			}
+			first = false
+			renderTitleNode(sb, c, src)
+		}
+		return
+	case *extast.TableRow:
+		first := true
+		for c := node.FirstChild(); c != nil; c = c.NextSibling() {
+			if !first {
+				sb.WriteByte(' ')
+			}
+			first = false
+			renderTitleNode(sb, c, src)
+		}
+		return
+	case *extast.TableCell:
+		for c := node.FirstChild(); c != nil; c = c.NextSibling() {
+			renderTitleNode(sb, c, src)
+		}
+		sb.WriteByte(' ')
 		return
 	}
 

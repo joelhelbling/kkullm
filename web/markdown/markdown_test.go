@@ -204,6 +204,41 @@ func TestRenderTitle_EscapesRawHTML(t *testing.T) {
 	}
 }
 
+func TestRenderTitle_CodeBlockTextPreserved(t *testing.T) {
+	got := string(RenderTitle("```\nhello world\n```"))
+	if strings.Contains(got, "<pre") || strings.Contains(got, "<code") {
+		t.Errorf("expected no <pre>/<code>, got: %s", got)
+	}
+	if !strings.Contains(got, "hello world") {
+		t.Errorf("expected code text preserved, got: %q", got)
+	}
+}
+
+func TestRenderTitle_TableFlattens(t *testing.T) {
+	got := string(RenderTitle("| a | b |\n|---|---|\n| 1 | 2 |\n"))
+	if strings.Contains(got, "<table") || strings.Contains(got, "<td") || strings.Contains(got, "<tr") || strings.Contains(got, "<th") {
+		t.Errorf("expected no table tags, got: %s", got)
+	}
+	if strings.Contains(got, "|") || strings.Contains(got, "---") {
+		t.Errorf("expected no pipe/separator chars, got: %q", got)
+	}
+	for _, want := range []string{"a", "b", "1", "2"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("expected cell text %q present, got: %q", want, got)
+		}
+	}
+}
+
+func TestRenderTitle_BlockquoteFlattens(t *testing.T) {
+	got := string(RenderTitle("> quoted text"))
+	if strings.Contains(got, "<blockquote") {
+		t.Errorf("expected no <blockquote>, got: %s", got)
+	}
+	if !strings.Contains(got, "quoted text") {
+		t.Errorf("expected blockquote text preserved, got: %q", got)
+	}
+}
+
 func TestRender_ConcurrentSafe(t *testing.T) {
 	src := "# h\n\n**b** and `c` and [l](https://example.com)\n\n- [x] done\n"
 	const n = 32
