@@ -113,3 +113,14 @@ func TestRenderBody_ImageRelativeDropped(t *testing.T) {
 		t.Errorf("expected relative <img> to be dropped, got: %s", got)
 	}
 }
+
+func TestRenderBody_FencedCodeHighlighted(t *testing.T) {
+	src := "```go\nfunc main() {}\n```\n"
+	got := string(RenderBody(src))
+	if !strings.Contains(got, "<pre") || !strings.Contains(got, "func") {
+		t.Errorf("expected highlighted code block, got: %s", got)
+	}
+	if !strings.Contains(got, "class=") {
+		t.Errorf("expected chroma class attributes, got: %s", got)
+	}
+}

@@ -3,6 +3,7 @@ module github.com/joelhelbling/kkullm
 go 1.25.5
 
 require (
+	github.com/alecthomas/chroma/v2 v2.2.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
 	github.com/yuin/goldmark v1.8.2
@@ -11,7 +12,6 @@ require (
 )
 
 require (
-	github.com/alecthomas/chroma/v2 v2.2.0 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
