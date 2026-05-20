@@ -18,6 +18,9 @@
 
 .kk-md ul, .kk-md ol { margin: 0.4em 0; padding-left: 1.5em; }
 .kk-md li { margin: 0.1em 0; }
+.kk-md li > p { margin: 0; }
+.kk-md li > p + p { margin-top: 0.3em; }
+.kk-md li > ul, .kk-md li > ol { margin: 0.1em 0; }
 .kk-md li > input[type="checkbox"] {
   margin-right: 0.4em;
   vertical-align: middle;
