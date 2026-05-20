@@ -84,6 +84,7 @@ type boardData struct {
 	Tabled       []cardView
 	BlockedCards []cardView
 	ShowProject  bool
+	Project      *model.Project // set in project-scoped view; nil for agent view
 }
 
 func groupCards(cards []model.Card, showProject bool) boardData {
@@ -275,6 +276,7 @@ func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) 
 func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 	var cards []model.Card
 	var showProject bool
+	var project *model.Project
 	var err error
 
 	if agentID := r.URL.Query().Get("agent"); agentID != "" {
@@ -295,11 +297,12 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			return
 		}
-		project, projErr := ws.store.GetProject(id)
+		p, projErr := ws.store.GetProject(id)
 		if projErr != nil {
 			renderError(w, 404, "project not found", projErr)
 			return
 		}
+		project = p
 		cards, err = ws.store.ListCards(store.CardListParams{Project: project.Name, ArchiveLimit: webArchiveLimit})
 		showProject = false
 	}
@@ -311,6 +314,7 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 
 	bd := groupCards(cards, showProject)
 	bd.BlockedCards = ws.loadBlockers(w) // global; nil on error with toast trigger set
+	bd.Project = project                 // nil in agent view; suppresses the intro banner
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "board", bd); err != nil {
