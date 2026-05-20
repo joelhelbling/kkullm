@@ -195,7 +195,7 @@ BH_CRACKED=$(create_card beehive worker_bee \
   --tag maintenance)
 
 BH_FORAGE=$(create_card beehive worker_bee \
-  "Forage south clover field at first light" todo \
+  "Forage *south clover* field at first light" todo \
   --assignee worker_bee \
   --body "Scouts report peak nectar yield 0530-0700. Bring backup proboscis." \
   --tag foraging --tag priority)
@@ -211,6 +211,19 @@ BH_SIGN=$(create_card beehive worker_bee \
   --assignee drone --assignee worker_bee \
   --body "Current sign reads 'Bee Right Bac' after the storm. Aesthetics matter." \
   --tag pr)
+
+BH_MARKDOWN_SHOWCASE_BODY=$'## Subhead\n\nA paragraph with **bold**, _italic_, ~~strikethrough~~, `inline code`, and an autolink: https://example.com.\n\n### Lists\n\n- bullet one\n- bullet two\n  - nested\n- bullet three\n\n1. ordered\n2. ordered\n3. ordered\n\n### Task list\n\n- [x] design approved\n- [ ] implementation\n- [ ] tests\n\n### Code\n\n```go\nfunc render(md string) template.HTML {\n    return mdRenderer.Render(md)\n}\n```\n\n### Table\n\n| Status     | Count |\n|------------|------:|\n| todo       |     3 |\n| in_flight  |     1 |\n| completed  |     7 |\n\n> A blockquote for emphasis.\n\n![Diagram](https://placehold.co/600x200)\n\n[Link to docs](https://example.com/docs)\n'
+
+BH_SHOWCASE=$(create_card beehive worker_bee \
+  "Markdown ~~smoke~~ **showcase** with \`code\`" todo \
+  --body "$BH_MARKDOWN_SHOWCASE_BODY" \
+  --tag docs)
+
+BH_SHOWCASE_C1=$'Here is what I have in mind:\n\n```bash\ntask build && ./kkullm serve --db kkullm.db\n```\n\n- step 1\n- step 2\n- step 3\n'
+add_comment "$BH_SHOWCASE" drone "$BH_SHOWCASE_C1"
+
+BH_SHOWCASE_C2=$'Looks good. Linking the [issue](https://example.com/issues/42) and emphasizing **the deadline**.'
+add_comment "$BH_SHOWCASE" queen_bee "$BH_SHOWCASE_C2"
 
 # In flight
 BH_POLLEN=$(create_card beehive worker_bee \
@@ -308,7 +321,7 @@ BN_PATROL=$(create_card birds_nest robin \
 BN_SQUEAKY=$(create_card birds_nest robin \
   "Brood chick #2 — squeakiest one, needs extra feeding" todo \
   --assignee robin \
-  --body "Squeaks at all hours. Suspect inherited it from his father (RIP)." \
+  --body $'Squeaks at all hours. Suspect inherited it from his father (RIP). Plan:\n\n- [x] inventory worms\n- [ ] extra feeding at dawn\n- [ ] extra feeding at dusk' \
   --tag brood)
 
 BN_SQUIRREL=$(create_card birds_nest robin \
@@ -413,11 +426,11 @@ AH_DRAIN=$(create_card ant_hill worker_ant \
 AH_CRUMBS=$(create_card ant_hill worker_ant \
   "Transport breadcrumb shipment from picnic area" todo \
   --assignee worker_ant \
-  --body "Estimated 200kg of crumbs (in ant units). Pretzel chunks especially valuable." \
+  --body $'Crumb yield has dipped. Running:\n\n```sh\nfind /pantry -name "*.crumb" -newer last_haul\n```\n\nResults pending. Pretzel chunks especially valuable.' \
   --tag logistics)
 
 AH_APHIDQUOTA=$(create_card ant_hill queen_ant \
-  "Aphid milking quotas review" todo \
+  "Aphid \`milking-quotas\` review" todo \
   --assignee worker_ant \
   --body "Honeydew yield per aphid is down 12%. Investigating cause: stress? rival hive interference?" \
   --tag production)
@@ -543,6 +556,6 @@ add_comment "$AH_ANNEX"      robin      "From altitude: the south meadow is wett
 
 echo
 echo "Seed complete."
-echo "  beehive:    17 cards across worker_bee, drone, queen_bee"
+echo "  beehive:    18 cards across worker_bee, drone, queen_bee"
 echo "  birds_nest: 16 cards (robin is doing her best)"
 echo "  ant_hill:   17 cards across worker_ant, soldier_ant, queen_ant"
