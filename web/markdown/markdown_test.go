@@ -124,3 +124,82 @@ func TestRenderBody_FencedCodeHighlighted(t *testing.T) {
 		t.Errorf("expected chroma class attributes, got: %s", got)
 	}
 }
+
+func TestRenderTitle_InlineEmphasis(t *testing.T) {
+	got := string(RenderTitle("hello **world**"))
+	if !strings.Contains(got, "<strong>world</strong>") {
+		t.Errorf("expected <strong>world</strong>, got: %s", got)
+	}
+}
+
+func TestRenderTitle_InlineCode(t *testing.T) {
+	got := string(RenderTitle("call `foo()` here"))
+	if !strings.Contains(got, "<code>foo()</code>") {
+		t.Errorf("expected <code>foo()</code>, got: %s", got)
+	}
+}
+
+func TestRenderTitle_Strikethrough(t *testing.T) {
+	got := string(RenderTitle("~~gone~~ now"))
+	if !strings.Contains(got, "<del>gone</del>") {
+		t.Errorf("expected <del>gone</del>, got: %s", got)
+	}
+}
+
+func TestRenderTitle_HeadingFlattens(t *testing.T) {
+	got := string(RenderTitle("# Just a Title"))
+	if strings.Contains(got, "<h1>") || strings.Contains(got, "<h") {
+		t.Errorf("expected no heading tags, got: %s", got)
+	}
+	if !strings.Contains(got, "Just a Title") {
+		t.Errorf("expected heading text preserved, got: %s", got)
+	}
+}
+
+func TestRenderTitle_ListFlattens(t *testing.T) {
+	got := string(RenderTitle("- one\n- two"))
+	if strings.Contains(got, "<ul>") || strings.Contains(got, "<li>") {
+		t.Errorf("expected no list tags, got: %s", got)
+	}
+}
+
+func TestRenderTitle_CodeBlockFlattens(t *testing.T) {
+	got := string(RenderTitle("```\ncode\n```"))
+	if strings.Contains(got, "<pre>") || strings.Contains(got, "<code") && strings.Contains(got, "<pre") {
+		t.Errorf("expected no <pre>, got: %s", got)
+	}
+}
+
+func TestRenderTitle_LinkBecomesText(t *testing.T) {
+	got := string(RenderTitle("[label](https://example.com)"))
+	if strings.Contains(got, "<a ") {
+		t.Errorf("expected no <a> in title, got: %s", got)
+	}
+	if !strings.Contains(got, "label") {
+		t.Errorf("expected link label preserved, got: %s", got)
+	}
+}
+
+func TestRenderTitle_ImageDropped(t *testing.T) {
+	got := string(RenderTitle("![alt](https://example.com/x.png)"))
+	if strings.Contains(got, "<img") {
+		t.Errorf("expected no <img> in title, got: %s", got)
+	}
+}
+
+func TestRenderTitle_NewlinesCollapseToSpaces(t *testing.T) {
+	got := string(RenderTitle("line1\nline2"))
+	if strings.Contains(got, "\n") || strings.Contains(got, "<br") {
+		t.Errorf("expected newlines collapsed, got: %q", got)
+	}
+	if !strings.Contains(got, "line1 line2") {
+		t.Errorf("expected single-space join, got: %q", got)
+	}
+}
+
+func TestRenderTitle_EscapesRawHTML(t *testing.T) {
+	got := string(RenderTitle("safe <script>x</script> title"))
+	if strings.Contains(got, "<script>") {
+		t.Errorf("expected <script> escaped, got: %s", got)
+	}
+}

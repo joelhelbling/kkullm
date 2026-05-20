@@ -13,6 +13,7 @@ import (
 	"github.com/yuin/goldmark"
 	gmast "github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
+	extast "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
@@ -88,7 +89,125 @@ func RenderBody(md string) template.HTML {
 	return template.HTML(buf.String())
 }
 
-// RenderTitle renders inline-only markdown to safe HTML. Placeholder.
+// titleParser is a goldmark instance used only to parse — we never call its
+// renderer. We walk the AST ourselves and emit inline-only HTML, flattening
+// block constructs and dropping links/images.
+var titleParser = goldmark.New(
+	goldmark.WithExtensions(
+		extension.Strikethrough,
+		extension.Linkify, // so bare URLs still flatten cleanly
+	),
+)
+
+// RenderTitle renders inline-only markdown to safe HTML. Block constructs
+// flatten to their text content; links flatten to their visible text; images
+// are dropped entirely; newlines collapse to single spaces. Used for card
+// titles.
 func RenderTitle(md string) template.HTML {
-	return template.HTML(template.HTMLEscapeString(md))
+	doc := titleParser.Parser().Parse(text.NewReader([]byte(md)))
+	var sb strings.Builder
+	renderTitleNode(&sb, doc, []byte(md))
+	// Collapse any residual whitespace runs (newlines, tabs) to single spaces.
+	out := collapseWhitespace(sb.String())
+	return template.HTML(out)
+}
+
+func renderTitleNode(sb *strings.Builder, n gmast.Node, src []byte) {
+	switch node := n.(type) {
+	case *gmast.Text:
+		// Text segment from source.
+		seg := node.Segment
+		sb.WriteString(template.HTMLEscapeString(string(seg.Value(src))))
+		// Soft/hard line breaks inside a Text node become spaces.
+		if node.SoftLineBreak() || node.HardLineBreak() {
+			sb.WriteByte(' ')
+		}
+		return
+	case *gmast.String:
+		sb.WriteString(template.HTMLEscapeString(string(node.Value)))
+		return
+	case *gmast.CodeSpan:
+		sb.WriteString("<code>")
+		for c := node.FirstChild(); c != nil; c = c.NextSibling() {
+			renderTitleNode(sb, c, src)
+		}
+		sb.WriteString("</code>")
+		return
+	case *gmast.Emphasis:
+		tag := "em"
+		if node.Level == 2 {
+			tag = "strong"
+		}
+		sb.WriteString("<")
+		sb.WriteString(tag)
+		sb.WriteString(">")
+		for c := node.FirstChild(); c != nil; c = c.NextSibling() {
+			renderTitleNode(sb, c, src)
+		}
+		sb.WriteString("</")
+		sb.WriteString(tag)
+		sb.WriteString(">")
+		return
+	case *gmast.Link:
+		// Drop the <a>; render only inline children (the link text).
+		for c := node.FirstChild(); c != nil; c = c.NextSibling() {
+			renderTitleNode(sb, c, src)
+		}
+		return
+	case *gmast.AutoLink:
+		// Render the URL text but without an <a> wrapper.
+		sb.WriteString(template.HTMLEscapeString(string(node.URL(src))))
+		return
+	case *gmast.Image:
+		// Dropped entirely — no <img>, no alt text rendered as content.
+		return
+	}
+
+	// Strikethrough from the extension package.
+	if isStrikethrough(n) {
+		sb.WriteString("<del>")
+		for c := n.FirstChild(); c != nil; c = c.NextSibling() {
+			renderTitleNode(sb, c, src)
+		}
+		sb.WriteString("</del>")
+		return
+	}
+
+	// Default: recurse into children, dropping any block structure.
+	// Insert a space between consecutive block-level children so list items
+	// or paragraphs don't run together.
+	first := true
+	for c := n.FirstChild(); c != nil; c = c.NextSibling() {
+		if !first && c.Type() == gmast.TypeBlock {
+			sb.WriteByte(' ')
+		}
+		first = false
+		renderTitleNode(sb, c, src)
+	}
+}
+
+func isStrikethrough(n gmast.Node) bool {
+	_, ok := n.(*extast.Strikethrough)
+	return ok
+}
+
+func collapseWhitespace(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	space := false
+	for _, r := range s {
+		if r == '\n' || r == '\t' || r == '\r' {
+			r = ' '
+		}
+		if r == ' ' {
+			if space {
+				continue
+			}
+			space = true
+		} else {
+			space = false
+		}
+		b.WriteRune(r)
+	}
+	return strings.TrimSpace(b.String())
 }
