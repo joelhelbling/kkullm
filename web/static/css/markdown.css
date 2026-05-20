@@ -1,6 +1,7 @@
 /* markdown.css — styles for rendered markdown content (.kk-md container)
    and chroma class-based syntax highlighting. */
 
+.kk-md { white-space: normal; }
 .kk-md > *:first-child { margin-top: 0; }
 .kk-md > *:last-child  { margin-bottom: 0; }
 
