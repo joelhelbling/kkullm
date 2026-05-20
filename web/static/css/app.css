@@ -1399,9 +1399,9 @@ body::before {
   width: 100%;
   resize: vertical;
   font: inherit;
-  font-family: var(--font-body);
-  font-size: 13.5px;
-  line-height: 1.5;
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  line-height: 1.45;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -1776,6 +1776,12 @@ body::before {
   resize: vertical;
   line-height: 1.5;
   min-height: 80px;
+}
+
+.compose-field textarea[name="body"] {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  line-height: 1.45;
 }
 
 .compose-field input[type="text"]:focus,
