@@ -46,6 +46,7 @@ Some issues straddle CORE+WEB (#30, #35) — they serialize against **both** lan
 ## Dependency graph
 
 ```
+#39 CI (GitHub Actions) .............. FOUNDATION — merges before all other work
 #29 README ........................... independent (parallel anytime)
 #25 Favicon .......................... independent files (parallel anytime)
 
@@ -65,6 +66,7 @@ Some issues straddle CORE+WEB (#30, #35) — they serialize against **both** lan
 ```
 
 **Hard gates:**
+- `#39` (CI) merges before every other task, so all subsequent PRs are tested automatically.
 - `#31` must merge before `#32`, `#33`, `#34`, `#35` start.
 - `#30` must merge before `#31` starts (both edit `store/card.go`).
 - `#36`+`#37` must merge before `#34`'s "formerly-assigned" clause and before `#35` can record `forced`.
@@ -83,6 +85,22 @@ Some issues straddle CORE+WEB (#30, #35) — they serialize against **both** lan
 - Caveat: `#30` (WEB lane) edits `store/card.go`, so it **must merge before** the CORE lane starts `#31`. And `#35` (CORE lane) edits `web/handlers.go`+`app.js`, so it **must merge after** the WEB lane drains `#32–#34`. These two interlocks are the only cross-lane synchronization points.
 
 The Waves below are written for shape (A); the lane labels let you collapse them into shape (B).
+
+---
+
+## Wave 0 — Foundation (do this first, alone)
+
+### Task 0 — #39 CI: run tests and build on GitHub Actions  · lane DOCS/infra (disjoint)
+**Brief for subagent — Files:** Create `.github/workflows/ci.yml`.
+**Behavior:** On `pull_request` and `push` to `main`: `actions/checkout`; `actions/setup-go` pinned to the repo's Go version (`go.mod`/`mise.toml` → Go 1.26.x) with module caching; build (`go build ./...` or `task build`); test (`go test ./...` ≡ `task test`); `gofmt -l .` (fail if non-empty) and `go vet ./...`. Pick one of {call `go` directly, or set up `go-task/task` via `arduino/setup-task`} and keep it consistent.
+**Tests:** none to author — the workflow IS the test harness. Verify by pushing the branch and confirming the Actions run is green on current `main`.
+**Done:** workflow runs and passes on a PR; a deliberately failing test turns the check red; PR `Closes #39`.
+**Why first:** once merged, every later `issue-NN-*` PR is validated automatically — de-risks the whole roadmap, especially #31's migration.
+
+- [ ] Worktree `../kkullm-issue-39` (branch `issue-39-ci`) off `main`.
+- [ ] Dispatch subagent with the brief above (touches only `.github/` — collides with nothing).
+- [ ] Review: confirm the run is green on `main` and red on a forced failure; merge; remove worktree.
+- [ ] **Gate:** do not start Wave 1 until #39 is merged.
 
 ---
 
@@ -274,6 +292,7 @@ The Waves below are written for shape (A); the lane labels let you collapse them
 
 | Roadmap issue | Task | Covered |
 |---|---|---|
+| #39 CI (GitHub Actions) | Task 0 | ✓ |
 | #24 Archive button | Task 3 | ✓ |
 | #25 Favicon | Task 2 | ✓ |
 | #26 Edit title/body | Task 4 | ✓ |
@@ -290,6 +309,6 @@ The Waves below are written for shape (A); the lane labels let you collapse them
 | #37 actor identity | Task 12 | ✓ |
 | #38 skill docs | Task 15 | ✓ |
 
-**Dependency gates honored:** #30 before #31 (Task 7 before Task 8); #31 before #32/#33/#34/#35 (Task 8 before Tasks 9/10/13/14); #36 before #37 and before #34's formerly-assigned and #35's `forced` (Task 11 before Tasks 12/13/14); #38 last (Task 15). ✓
+**Dependency gates honored:** #39 (CI) before everything (Task 0 first); #30 before #31 (Task 7 before Task 8); #31 before #32/#33/#34/#35 (Task 8 before Tasks 9/10/13/14); #36 before #37 and before #34's formerly-assigned and #35's `forced` (Task 11 before Tasks 12/13/14); #38 last (Task 15). ✓
 
 **Known risk flagged:** #31's migration is lossy for pre-existing `status='blocked'` rows (no recorded previous status → default `todo`); called out in Task 8. The repo's live `kkullm.db` (with WAL) will need re-migration or a `task dev-seed` reset after #31 merges.
