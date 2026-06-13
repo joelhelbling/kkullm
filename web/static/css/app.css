@@ -842,16 +842,54 @@ body::before {
 .drawer-block-form,
 .drawer-unblock-form {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
-  flex-wrap: wrap;
   margin-top: 8px;
 }
 
 .drawer-block-form input[type="text"],
 .drawer-unblock-form input[type="text"] {
-  flex: 1 1 160px;
-  min-width: 120px;
+  width: 100%;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  line-height: 1.45;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.drawer-block-form input[type="text"]:focus,
+.drawer-unblock-form input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-elevated);
+}
+
+/* The unblock form has a bare submit button (no .drawer-edit-actions
+   wrapper); style it to match the edit form's primary submit button. */
+.drawer-unblock-form button[type="submit"] {
+  align-self: flex-end;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 7px 14px;
+  border: 1px solid var(--text-primary);
+  border-radius: 999px;
+  background: var(--text-primary);
+  color: var(--bg-page);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.drawer-unblock-form button[type="submit"]:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
 }
 
 .card-tile-title {
