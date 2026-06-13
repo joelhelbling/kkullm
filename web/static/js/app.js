@@ -729,6 +729,30 @@ function kkullm() {
       // can't reproduce. Reload the board so the badge appears/clears, then
       // refresh the drawer if it's open on this card.
       const wasBlocked = cardEl.dataset.blocked === 'true';
+      // On the orchestrator Blocked view, an unblock should clear the card's
+      // blocked affordances IN PLACE and keep it listed (it filters out on the
+      // next server load) rather than reloading the regular board. (#56)
+      const blockedView = document.querySelector('#board-container [data-view="blocked"]');
+      if (blockedView && wasBlocked && !card.blocked) {
+        cardEl.removeAttribute('data-blocked');
+        cardEl.classList.remove('card-tile-blocked');
+        const badge = cardEl.querySelector('.card-blocked-badge');
+        if (badge) badge.remove();
+        const reason = cardEl.closest('.blocked-card-wrap');
+        if (reason) {
+          const reasonEl = reason.querySelector('.blocked-reason');
+          if (reasonEl) reasonEl.remove();
+        }
+        cardEl.classList.add('highlight');
+        setTimeout(() => cardEl.classList.remove('highlight'), 1500);
+        if (this.drawerOpen && this.drawerCardId === card.id) {
+          htmx.ajax('GET', '/ui/cards/' + card.id + '/drawer', {
+            target: '#drawer-container',
+            swap: 'innerHTML',
+          });
+        }
+        return;
+      }
       if (wasBlocked !== !!card.blocked) {
         this.loadBoard();
         if (this.drawerOpen && this.drawerCardId === card.id) {
