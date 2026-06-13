@@ -211,8 +211,7 @@ func (ws *WebServer) handleRoot(w http.ResponseWriter, r *http.Request) {
 }
 
 type statusPill struct {
-	Status    string
-	Reachable bool
+	Status string
 }
 
 type drawerData struct {
@@ -262,10 +261,7 @@ func buildStatusPills(current string) []statusPill {
 		if s == current {
 			continue
 		}
-		pills = append(pills, statusPill{
-			Status:    s,
-			Reachable: model.CanTransition(current, s),
-		})
+		pills = append(pills, statusPill{Status: s})
 	}
 	return pills
 }
