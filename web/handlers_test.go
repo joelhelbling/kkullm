@@ -201,8 +201,9 @@ func TestDrawerHandler(t *testing.T) {
 	}
 
 	// From status "todo", every status except "todo" itself should appear as a pill.
-	// in_flight, blocked, tabled are reachable; considering and completed are disabled.
-	for _, s := range []string{"in_flight", "blocked", "tabled", "considering", "completed"} {
+	// in_flight, tabled are reachable; considering and completed are disabled.
+	// blocked is no longer a status, so it is not a status pill.
+	for _, s := range []string{"in_flight", "tabled", "considering", "completed"} {
 		if !strings.Contains(body, ">"+s+"<") {
 			t.Errorf("expected drawer to show %q as a status pill", s)
 		}
@@ -421,7 +422,7 @@ func TestBoardAgentScoped(t *testing.T) {
 func TestBlockersHandler(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
-	// Create a card, move it to todo, then blocked
+	// Create a todo card, then set the orthogonal blocked flag.
 	card, _ := st.CreateCard(store.CardCreateParams{
 		Title:     "Blocked card",
 		Status:    "todo",
@@ -429,8 +430,8 @@ func TestBlockersHandler(t *testing.T) {
 		Assignees: []string{"user"},
 	})
 
-	blockedStatus := "blocked"
-	st.UpdateCard(card.ID, store.CardUpdateParams{Status: &blockedStatus})
+	blockedFlag := true
+	st.UpdateCard(card.ID, store.CardUpdateParams{Blocked: &blockedFlag})
 
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
@@ -1036,13 +1037,13 @@ func TestFullFlow(t *testing.T) {
 		t.Error("blockers should not contain the test card (it's in todo, not blocked)")
 	}
 
-	// 7. Move to blocked
-	req, _ = http.NewRequest("PATCH",
-		ts.URL+fmt.Sprintf("/ui/cards/%d/status", card.ID),
-		strings.NewReader("status=blocked"))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, _ = http.DefaultClient.Do(req)
-	resp.Body.Close()
+	// 7. Set the orthogonal blocked flag. (The in-place web toggle UX is
+	// deferred to #32; here we set the flag via the store to verify the
+	// global Blocked column still sources blocked cards by flag.)
+	blockedFlag := true
+	if _, err := st.UpdateCard(card.ID, store.CardUpdateParams{Blocked: &blockedFlag}); err != nil {
+		t.Fatalf("set blocked flag: %v", err)
+	}
 
 	// 8. Fetch blockers (should contain the card now)
 	resp, err = http.Get(ts.URL + "/ui/blockers")

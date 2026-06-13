@@ -51,7 +51,7 @@ var commentCreateCmd = &cobra.Command{
 			return emitDryRun(fmt.Sprintf("would add comment to card #%d as %q", cardID, agent), req)
 		}
 		c := client.New(serverURL)
-		comment, err := c.CreateComment(cardID, agent, commentCreateBody)
+		comment, err := c.CreateComment(cardID, agent, commentCreateBody, "")
 		if err != nil {
 			return err
 		}

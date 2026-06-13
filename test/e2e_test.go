@@ -70,7 +70,7 @@ func TestFullWorkflow(t *testing.T) {
 	}
 
 	// 6. Agent adds comment
-	_, err = c.CreateComment(card.ID, "dev-agent", "Started implementing JWT middleware")
+	_, err = c.CreateComment(card.ID, "dev-agent", "Started implementing JWT middleware", "")
 	if err != nil {
 		t.Fatalf("add comment: %v", err)
 	}

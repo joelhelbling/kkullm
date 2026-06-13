@@ -10,7 +10,11 @@ import (
 
 // agentContextSchemaVersion is bumped whenever the shape of `agent-context`
 // output changes, so agents can detect incompatibilities.
-const agentContextSchemaVersion = 1
+//
+// v2: blocked is an orthogonal flag, not a status. It is gone from
+// card_statuses and status_transitions; `card update` gains
+// --blocked/--unblocked/--reason; comments carry a kind ("block"/"unblock").
+const agentContextSchemaVersion = 2
 
 type flagInfo struct {
 	Name      string `json:"name"`
@@ -109,6 +113,9 @@ var agentContextCmd = &cobra.Command{
 				"card_statuses":      model.AllStatuses,
 				"status_transitions": model.ValidTransitions,
 				"relation_types":     []string{"blocked_by", "belongs_to", "interested_in"},
+				// blocked is an orthogonal flag, not a status: toggle it with
+				// `card update --blocked/--unblocked` (optionally --reason).
+				"comment_kinds": []string{"", "block", "unblock"},
 			},
 			EnvVars: []envVarInfo{
 				{"KKULLM_SERVER", "Server URL. Precedence: --server flag > KKULLM_SERVER > default http://localhost:7722"},

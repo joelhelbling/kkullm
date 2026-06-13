@@ -54,13 +54,17 @@ The CLI follows a consistent, agent-native contract. Rely on it:
 ## Cards and their lifecycle
 
 A card is the unit of work: it has a title, body, status, project, assignees,
-tags, relations, and comments. Status flows roughly:
+tags, relations, comments, and an orthogonal `blocked` flag. Status flows
+roughly:
 
 ```
 considering → todo → in_flight → completed
-                 ↘ blocked ↗
         (tabled: shelved, not completed)
 ```
+
+`blocked` is NOT a status — it is a separate boolean flag a card carries while
+it stays in its real status column. Set or clear it with the flags on
+`card update` (see below); it never changes status or assignees.
 
 Transitions are validated server-side — an illegal jump is rejected with a
 teaching error. For the exact status set and the full transition map, read the
@@ -92,8 +96,11 @@ Kkullm agents pull work rather than receiving it. The loop:
 4. **Finish.**
    `kkullm card update <id> --status completed --as <agent>`
 
-If you get stuck, set the card to `blocked` and comment why — another agent or
-a human can then pick it up.
+If you get stuck, mark the card blocked with a reason — the card stays in its
+current column, and the reason is recorded as a tagged comment in its timeline:
+`kkullm card update <id> --blocked --reason "waiting on the auth spec" --as <agent>`
+When the blocker clears, unblock it (optionally moving it in the same call):
+`kkullm card update <id> --unblocked --status in_flight --as <agent>`
 
 ### Parsing output
 

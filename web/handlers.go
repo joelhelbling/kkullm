@@ -102,9 +102,10 @@ func groupCards(cards []model.Card, showProject bool) boardData {
 			bd.Completed = append(bd.Completed, cv)
 		case "tabled":
 			bd.Tabled = append(bd.Tabled, cv)
-		case "blocked":
-			bd.BlockedCards = append(bd.BlockedCards, cv)
 		}
+		// blocked is an orthogonal flag now, so a blocked card stays in its
+		// real status column above. The global Blocked column is sourced
+		// separately by flag (see loadBlockers).
 	}
 	return bd
 }
@@ -380,7 +381,8 @@ const blockerToastTrigger = `{"showToast":{"message":"Couldn't load blockers","v
 // detail, sets an HX-Trigger header for a toast, and returns nil so the
 // board renders with an empty Blocked column.
 func (ws *WebServer) loadBlockers(w http.ResponseWriter) []cardView {
-	cards, err := ws.store.ListCards(store.CardListParams{Status: "blocked"})
+	blocked := true
+	cards, err := ws.store.ListCards(store.CardListParams{Blocked: &blocked})
 	if err != nil {
 		log.Printf("list blocked cards: %v", err)
 		w.Header().Set("HX-Trigger", blockerToastTrigger)
@@ -631,8 +633,9 @@ func (ws *WebServer) broadcastCardDeleted(id int) {
 }
 
 func (ws *WebServer) handleBlockers(w http.ResponseWriter, r *http.Request) {
+	blocked := true
 	cards, err := ws.store.ListCards(store.CardListParams{
-		Status: "blocked",
+		Blocked: &blocked,
 	})
 	if err != nil {
 		renderError(w, 500, "internal error", err)
