@@ -6,7 +6,7 @@ import (
 	"github.com/joelhelbling/kkullm/model"
 )
 
-func (s *Store) CreateComment(cardID, agentID int, body string) (*model.Comment, error) {
+func (s *Store) CreateComment(cardID, agentID int, body, kind string) (*model.Comment, error) {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("begin tx: %w", err)
@@ -19,8 +19,8 @@ func (s *Store) CreateComment(cardID, agentID int, body string) (*model.Comment,
 	}
 
 	result, err := tx.Exec(
-		"INSERT INTO comments (card_id, agent_id, author_name, body) VALUES (?, ?, ?, ?)",
-		cardID, agentID, agentName, body,
+		"INSERT INTO comments (card_id, agent_id, author_name, body, kind) VALUES (?, ?, ?, ?, ?)",
+		cardID, agentID, agentName, body, kind,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("insert comment: %w", err)
@@ -37,10 +37,10 @@ func (s *Store) CreateComment(cardID, agentID int, body string) (*model.Comment,
 
 	c := &model.Comment{}
 	err = s.db.QueryRow(`
-		SELECT c.id, c.card_id, COALESCE(c.agent_id, 0), COALESCE(a.name, c.author_name, ''), c.body, c.created_at
+		SELECT c.id, c.card_id, COALESCE(c.agent_id, 0), COALESCE(a.name, c.author_name, ''), c.body, c.kind, c.created_at
 		FROM comments c LEFT JOIN agents a ON c.agent_id = a.id
 		WHERE c.id = ?
-	`, id).Scan(&c.ID, &c.CardID, &c.AgentID, &c.Agent, &c.Body, &c.CreatedAt)
+	`, id).Scan(&c.ID, &c.CardID, &c.AgentID, &c.Agent, &c.Body, &c.Kind, &c.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("get comment %d: %w", id, err)
 	}
@@ -49,7 +49,7 @@ func (s *Store) CreateComment(cardID, agentID int, body string) (*model.Comment,
 
 func (s *Store) ListComments(cardID int) ([]model.Comment, error) {
 	rows, err := s.db.Query(`
-		SELECT c.id, c.card_id, COALESCE(c.agent_id, 0), COALESCE(a.name, c.author_name, ''), c.body, c.created_at
+		SELECT c.id, c.card_id, COALESCE(c.agent_id, 0), COALESCE(a.name, c.author_name, ''), c.body, c.kind, c.created_at
 		FROM comments c LEFT JOIN agents a ON c.agent_id = a.id
 		WHERE c.card_id = ?
 		ORDER BY c.created_at ASC
@@ -62,7 +62,7 @@ func (s *Store) ListComments(cardID int) ([]model.Comment, error) {
 	var comments []model.Comment
 	for rows.Next() {
 		var c model.Comment
-		if err := rows.Scan(&c.ID, &c.CardID, &c.AgentID, &c.Agent, &c.Body, &c.CreatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.CardID, &c.AgentID, &c.Agent, &c.Body, &c.Kind, &c.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan comment: %w", err)
 		}
 		comments = append(comments, c)

@@ -16,7 +16,7 @@ func TestCreateComment_SnapshotsAuthorName(t *testing.T) {
 		t.Fatalf("CreateCard: %v", err)
 	}
 
-	comment, err := s.CreateComment(card.ID, agent.ID, "hello")
+	comment, err := s.CreateComment(card.ID, agent.ID, "hello", "")
 	if err != nil {
 		t.Fatalf("CreateComment: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestCreateAndListComments(t *testing.T) {
 		Title: "Test card", Status: "todo", ProjectID: proj.ID,
 	})
 
-	comment, err := s.CreateComment(card.ID, agent.ID, "Started working on this")
+	comment, err := s.CreateComment(card.ID, agent.ID, "Started working on this", "")
 	if err != nil {
 		t.Fatalf("CreateComment: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestCreateAndListComments(t *testing.T) {
 		t.Errorf("agent = %q, want 'dev-agent'", comment.Agent)
 	}
 
-	s.CreateComment(card.ID, agent.ID, "Making progress")
+	s.CreateComment(card.ID, agent.ID, "Making progress", "")
 
 	comments, err := s.ListComments(card.ID)
 	if err != nil {
@@ -73,6 +73,41 @@ func TestCreateAndListComments(t *testing.T) {
 	}
 }
 
+func TestCreateComment_PersistsKind(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	agent := createTestAgent(t, s, "kind-agent", proj.ID)
+
+	card, _ := s.CreateCard(CardCreateParams{Title: "Test card", Status: "todo", ProjectID: proj.ID})
+
+	c, err := s.CreateComment(card.ID, agent.ID, "blocking on upstream", "block")
+	if err != nil {
+		t.Fatalf("CreateComment: %v", err)
+	}
+	if c.Kind != "block" {
+		t.Errorf("comment kind = %q, want \"block\"", c.Kind)
+	}
+
+	// A normal (empty-kind) comment still works.
+	if _, err := s.CreateComment(card.ID, agent.ID, "normal note", ""); err != nil {
+		t.Fatalf("CreateComment normal: %v", err)
+	}
+
+	comments, err := s.ListComments(card.ID)
+	if err != nil {
+		t.Fatalf("ListComments: %v", err)
+	}
+	if len(comments) != 2 {
+		t.Fatalf("got %d comments, want 2", len(comments))
+	}
+	if comments[0].Kind != "block" {
+		t.Errorf("comments[0].Kind = %q, want \"block\"", comments[0].Kind)
+	}
+	if comments[1].Kind != "" {
+		t.Errorf("comments[1].Kind = %q, want \"\"", comments[1].Kind)
+	}
+}
+
 // Regression: after the author has been deleted, comments.agent_id is NULL,
 // and ListComments must still return the rows (scanning NULL into the model's
 // int AgentID via COALESCE), surfacing the snapshot name.
@@ -84,7 +119,7 @@ func TestListComments_HandlesDeletedAuthor(t *testing.T) {
 	card, _ := s.CreateCard(CardCreateParams{
 		Title: "Test card", Status: "todo", ProjectID: proj.ID,
 	})
-	if _, err := s.CreateComment(card.ID, agent.ID, "discretion above all"); err != nil {
+	if _, err := s.CreateComment(card.ID, agent.ID, "discretion above all", ""); err != nil {
 		t.Fatalf("CreateComment: %v", err)
 	}
 

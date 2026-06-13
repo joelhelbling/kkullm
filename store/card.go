@@ -23,6 +23,10 @@ type CardListParams struct {
 	Status   string
 	Tag      string
 
+	// Blocked, when non-nil, filters by the orthogonal blocked flag:
+	// true returns only blocked cards, false only unblocked. nil = no filter.
+	Blocked *bool
+
 	// ArchiveLimit, when > 0, caps the number of 'completed' and 'tabled'
 	// cards returned. Each terminal status keeps its N most-recently-updated
 	// rows; older ones are considered archived.
@@ -40,6 +44,7 @@ type CardUpdateParams struct {
 	Title     *string
 	Body      *string
 	Status    *string
+	Blocked   *bool
 	Assignees []string
 	Tags      []string
 	Relations []model.CardRelation
@@ -109,13 +114,13 @@ func (s *Store) CreateCard(p CardCreateParams) (*model.Card, error) {
 func (s *Store) GetCard(id int) (*model.Card, error) {
 	c := &model.Card{}
 	err := s.db.QueryRow(`
-		SELECT c.id, c.title, COALESCE(c.body, ''), c.status, c.project_id, p.name,
+		SELECT c.id, c.title, COALESCE(c.body, ''), c.status, c.blocked, c.project_id, p.name,
 		       (SELECT COUNT(*) FROM comments WHERE card_id = c.id),
 		       c.created_at, c.updated_at
 		FROM cards c JOIN projects p ON c.project_id = p.id
 		WHERE c.id = ?
 	`, id).Scan(
-		&c.ID, &c.Title, &c.Body, &c.Status, &c.ProjectID, &c.Project,
+		&c.ID, &c.Title, &c.Body, &c.Status, &c.Blocked, &c.ProjectID, &c.Project,
 		&c.CommentCount, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
@@ -220,7 +225,7 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 	baseQuery := `
 		SELECT DISTINCT
 			c.id AS id, c.title AS title, COALESCE(c.body, '') AS body,
-			c.status AS status, c.project_id AS project_id, p.name AS project,
+			c.status AS status, c.blocked AS blocked, c.project_id AS project_id, p.name AS project,
 			(SELECT COUNT(*) FROM comments WHERE card_id = c.id) AS comment_count,
 			c.created_at AS created_at, c.updated_at AS updated_at
 		FROM cards c
@@ -256,6 +261,15 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 		conditions = append(conditions, "c.status IN ("+strings.Join(placeholders, ", ")+")")
 	}
 
+	if params.Blocked != nil {
+		conditions = append(conditions, "c.blocked = ?")
+		if *params.Blocked {
+			args = append(args, 1)
+		} else {
+			args = append(args, 0)
+		}
+	}
+
 	if len(conditions) > 0 {
 		baseQuery += " WHERE " + strings.Join(conditions, " AND ")
 	}
@@ -284,41 +298,36 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 					END AS rn
 				FROM base
 			)
-			SELECT id, title, body, status, project_id, project, comment_count, created_at, updated_at
+			SELECT id, title, body, status, blocked, project_id, project, comment_count, created_at, updated_at
 			FROM ranked
 			WHERE ` + archiveFilter
 		args = append(args, params.ArchiveLimit)
 	} else {
 		query = `
 			WITH base AS (` + baseQuery + `)
-			SELECT id, title, body, status, project_id, project, comment_count, created_at, updated_at
+			SELECT id, title, body, status, blocked, project_id, project, comment_count, created_at, updated_at
 			FROM base
 		`
 	}
 
 	// Prioritized ordering:
 	//   1. in_flight   - most recently updated first (active work surfaces fast)
-	//   2. blocked     - least recently updated first (oldest blocker = most stale)
-	//   3. todo        - most recently updated first (placeholder until per-column ordinals exist)
-	//   4. considering - by max(created_at, updated_at) DESC (most-recent activity wins)
-	//   5. completed   - most recently updated first
-	//   6. tabled      - most recently updated first
+	//   2. todo        - most recently updated first (placeholder until per-column ordinals exist)
+	//   3. considering - by max(created_at, updated_at) DESC (most-recent activity wins)
+	//   4. completed   - most recently updated first
+	//   5. tabled      - most recently updated first
 	// Column names are unqualified so this clause works for both the
 	// plain base query and the windowed CTE wrapper.
 	query += `
 		ORDER BY
 			CASE status
 				WHEN 'in_flight'   THEN 1
-				WHEN 'blocked'     THEN 2
-				WHEN 'todo'        THEN 3
-				WHEN 'considering' THEN 4
-				WHEN 'completed'   THEN 5
-				WHEN 'tabled'      THEN 6
+				WHEN 'todo'        THEN 2
+				WHEN 'considering' THEN 3
+				WHEN 'completed'   THEN 4
+				WHEN 'tabled'      THEN 5
 				ELSE 99
 			END,
-			CASE status
-				WHEN 'blocked' THEN updated_at
-			END ASC,
 			CASE status
 				WHEN 'considering' THEN MAX(created_at, updated_at)
 				ELSE updated_at
@@ -336,7 +345,7 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 	for rows.Next() {
 		var c model.Card
 		if err := rows.Scan(
-			&c.ID, &c.Title, &c.Body, &c.Status, &c.ProjectID, &c.Project,
+			&c.ID, &c.Title, &c.Body, &c.Status, &c.Blocked, &c.ProjectID, &c.Project,
 			&c.CommentCount, &c.CreatedAt, &c.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan card: %w", err)
@@ -404,6 +413,14 @@ func (s *Store) UpdateCard(id int, p CardUpdateParams) (*model.Card, error) {
 	if p.Status != nil {
 		setClauses = append(setClauses, "status = ?")
 		setArgs = append(setArgs, *p.Status)
+	}
+	if p.Blocked != nil {
+		setClauses = append(setClauses, "blocked = ?")
+		if *p.Blocked {
+			setArgs = append(setArgs, 1)
+		} else {
+			setArgs = append(setArgs, 0)
+		}
 	}
 
 	if len(setClauses) > 0 {

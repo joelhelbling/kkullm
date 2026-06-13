@@ -523,6 +523,101 @@ func TestUpdateCardAddRelations(t *testing.T) {
 	}
 }
 
+func boolPtr(b bool) *bool { return &b }
+
+func TestUpdateCardSetBlockedLeavesStatusAndAssignees(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	agent := createTestAgent(t, s, "blocked-agent", proj.ID)
+
+	card, err := s.CreateCard(CardCreateParams{
+		Title:     "Work item",
+		ProjectID: proj.ID,
+		Status:    "todo",
+		Assignees: []string{agent.Name},
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+	if card.Blocked {
+		t.Error("new card should not be blocked")
+	}
+
+	// Set the blocked flag only.
+	updated, err := s.UpdateCard(card.ID, CardUpdateParams{Blocked: boolPtr(true)})
+	if err != nil {
+		t.Fatalf("UpdateCard set blocked: %v", err)
+	}
+	if !updated.Blocked {
+		t.Error("expected card to be blocked after setting flag")
+	}
+	if updated.Status != "todo" {
+		t.Errorf("status = %q, want unchanged \"todo\"", updated.Status)
+	}
+	if len(updated.Assignees) != 1 || updated.Assignees[0] != agent.Name {
+		t.Errorf("assignees = %v, want unchanged [%q]", updated.Assignees, agent.Name)
+	}
+
+	// Clear the blocked flag.
+	cleared, err := s.UpdateCard(card.ID, CardUpdateParams{Blocked: boolPtr(false)})
+	if err != nil {
+		t.Fatalf("UpdateCard clear blocked: %v", err)
+	}
+	if cleared.Blocked {
+		t.Error("expected card to be unblocked after clearing flag")
+	}
+	if cleared.Status != "todo" {
+		t.Errorf("status = %q, want unchanged \"todo\"", cleared.Status)
+	}
+}
+
+func TestListCardsFilterByBlocked(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+
+	blocked, err := s.CreateCard(CardCreateParams{Title: "blocked one", ProjectID: proj.ID, Status: "todo"})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+	if _, err := s.CreateCard(CardCreateParams{Title: "free one", ProjectID: proj.ID, Status: "todo"}); err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+	if _, err := s.UpdateCard(blocked.ID, CardUpdateParams{Blocked: boolPtr(true)}); err != nil {
+		t.Fatalf("set blocked: %v", err)
+	}
+
+	onlyBlocked, err := s.ListCards(CardListParams{Blocked: boolPtr(true)})
+	if err != nil {
+		t.Fatalf("ListCards(blocked=true): %v", err)
+	}
+	if len(onlyBlocked) != 1 {
+		t.Fatalf("blocked filter: got %d cards, want 1", len(onlyBlocked))
+	}
+	if onlyBlocked[0].ID != blocked.ID {
+		t.Errorf("blocked filter returned card %d, want %d", onlyBlocked[0].ID, blocked.ID)
+	}
+	if !onlyBlocked[0].Blocked {
+		t.Error("returned card should have Blocked=true")
+	}
+
+	onlyFree, err := s.ListCards(CardListParams{Blocked: boolPtr(false)})
+	if err != nil {
+		t.Fatalf("ListCards(blocked=false): %v", err)
+	}
+	if len(onlyFree) != 1 {
+		t.Fatalf("unblocked filter: got %d cards, want 1", len(onlyFree))
+	}
+
+	// nil filter returns everything.
+	all, err := s.ListCards(CardListParams{})
+	if err != nil {
+		t.Fatalf("ListCards(all): %v", err)
+	}
+	if len(all) != 2 {
+		t.Errorf("no filter: got %d cards, want 2", len(all))
+	}
+}
+
 func TestDeleteCard_CascadesCommentsAndAssignees(t *testing.T) {
 	s := setupTestDB(t)
 	proj := createTestProject(t, s)
@@ -538,7 +633,7 @@ func TestDeleteCard_CascadesCommentsAndAssignees(t *testing.T) {
 		t.Fatalf("CreateCard: %v", err)
 	}
 
-	if _, err := s.CreateComment(card.ID, agent.ID, "farewell"); err != nil {
+	if _, err := s.CreateComment(card.ID, agent.ID, "farewell", ""); err != nil {
 		t.Fatalf("CreateComment: %v", err)
 	}
 

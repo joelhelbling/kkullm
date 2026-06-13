@@ -88,6 +88,20 @@ var ValidTransitions = map[string]map[string]bool{
 	"tabled":      {"considering": true, "todo": true},
 }
 
+// ValidCommentKinds is the set of accepted Comment.Kind values. "" is a normal
+// comment; "block"/"unblock" tag the note left when a card's blocked flag is
+// toggled, so the "why" lives in the card timeline.
+var ValidCommentKinds = map[string]bool{
+	"":        true,
+	"block":   true,
+	"unblock": true,
+}
+
+// ValidCommentKind reports whether k is an accepted comment kind.
+func ValidCommentKind(k string) bool {
+	return ValidCommentKinds[k]
+}
+
 func CanTransition(from, to string) bool {
 	targets, ok := ValidTransitions[from]
 	if !ok {
