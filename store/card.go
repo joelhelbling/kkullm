@@ -15,6 +15,10 @@ type CardCreateParams struct {
 	Assignees []string
 	Tags      []string
 	Relations []model.CardRelation
+
+	// Actor is the acting-agent identity recorded into the audit trail.
+	// Defaults to "" until the CLI/API thread --as/KKULLM_AGENT through (#37).
+	Actor string
 }
 
 type CardListParams struct {
@@ -48,6 +52,10 @@ type CardUpdateParams struct {
 	Assignees []string
 	Tags      []string
 	Relations []model.CardRelation
+
+	// Actor is the acting-agent identity recorded into the audit trail.
+	// Defaults to "" until the CLI/API thread --as/KKULLM_AGENT through (#37).
+	Actor string
 }
 
 func (s *Store) CreateCard(p CardCreateParams) (*model.Card, error) {
@@ -374,19 +382,20 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 }
 
 func (s *Store) UpdateCard(id int, p CardUpdateParams) (*model.Card, error) {
-	// Validate status transition if status is changing
+	// Validate status transition if status is changing. oldStatus is captured
+	// for the audit trail (a status_changed event records from->to).
+	var oldStatus string
 	if p.Status != nil {
-		current := &struct{ Status string }{}
-		err := s.db.QueryRow("SELECT status FROM cards WHERE id = ?", id).Scan(&current.Status)
+		err := s.db.QueryRow("SELECT status FROM cards WHERE id = ?", id).Scan(&oldStatus)
 		if err != nil {
 			return nil, fmt.Errorf("get current status for card %d: %w", id, err)
 		}
-		if current.Status != *p.Status {
-			if !model.CanTransition(current.Status, *p.Status) {
-				allowed := model.AllowedTransitions(current.Status)
+		if oldStatus != *p.Status {
+			if !model.CanTransition(oldStatus, *p.Status) {
+				allowed := model.AllowedTransitions(oldStatus)
 				return nil, fmt.Errorf(
 					"invalid status transition %q -> %q; allowed transitions from %q: %v",
-					current.Status, *p.Status, current.Status, allowed,
+					oldStatus, *p.Status, oldStatus, allowed,
 				)
 			}
 		}
@@ -432,8 +441,33 @@ func (s *Store) UpdateCard(id int, p CardUpdateParams) (*model.Card, error) {
 		}
 	}
 
-	// Replace assignees if provided
+	// Replace assignees if provided, capturing the old set first so the audit
+	// trail can diff added/removed names.
+	var oldAssignees []string
 	if p.Assignees != nil {
+		rows, err := tx.Query(`
+			SELECT a.name FROM agents a
+			JOIN card_assignees ca ON a.id = ca.agent_id
+			WHERE ca.card_id = ?
+			ORDER BY a.name
+		`, id)
+		if err != nil {
+			return nil, fmt.Errorf("load current assignees: %w", err)
+		}
+		for rows.Next() {
+			var name string
+			if err := rows.Scan(&name); err != nil {
+				rows.Close()
+				return nil, fmt.Errorf("scan assignee: %w", err)
+			}
+			oldAssignees = append(oldAssignees, name)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		rows.Close()
+
 		if _, err := tx.Exec("DELETE FROM card_assignees WHERE card_id = ?", id); err != nil {
 			return nil, fmt.Errorf("delete assignees: %w", err)
 		}
@@ -475,11 +509,73 @@ func (s *Store) UpdateCard(id int, p CardUpdateParams) (*model.Card, error) {
 		}
 	}
 
+	// Record audit events within the same transaction so the trail commits
+	// atomically with the mutation. v1 records status transitions and assignee
+	// add/remove only.
+	if p.Status != nil && oldStatus != *p.Status {
+		if err := appendCardEvent(tx, model.CardEvent{
+			CardID:    id,
+			Actor:     p.Actor,
+			EventType: "status_changed",
+			FromValue: oldStatus,
+			ToValue:   *p.Status,
+		}); err != nil {
+			return nil, err
+		}
+	}
+	if p.Assignees != nil {
+		added, removed := diffAssignees(oldAssignees, p.Assignees)
+		for _, name := range added {
+			if err := appendCardEvent(tx, model.CardEvent{
+				CardID:    id,
+				Actor:     p.Actor,
+				EventType: "assignee_added",
+				ToValue:   name,
+			}); err != nil {
+				return nil, err
+			}
+		}
+		for _, name := range removed {
+			if err := appendCardEvent(tx, model.CardEvent{
+				CardID:    id,
+				Actor:     p.Actor,
+				EventType: "assignee_removed",
+				FromValue: name,
+			}); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("commit tx: %w", err)
 	}
 
 	return s.GetCard(id)
+}
+
+// diffAssignees returns names present in next but not old (added) and names
+// present in old but not next (removed).
+func diffAssignees(old, next []string) (added, removed []string) {
+	oldSet := make(map[string]bool, len(old))
+	for _, n := range old {
+		oldSet[n] = true
+	}
+	nextSet := make(map[string]bool, len(next))
+	for _, n := range next {
+		nextSet[n] = true
+	}
+	for _, n := range next {
+		if !oldSet[n] {
+			added = append(added, n)
+		}
+	}
+	for _, n := range old {
+		if !nextSet[n] {
+			removed = append(removed, n)
+		}
+	}
+	return added, removed
 }
 
 func (s *Store) DeleteCard(id int) error {
