@@ -102,6 +102,12 @@ current column, and the reason is recorded as a tagged comment in its timeline:
 When the blocker clears, unblock it (optionally moving it in the same call):
 `kkullm card update <id> --unblocked --status in_flight --as <agent>`
 
+The status transitions are guardrails, not a cage. If you need to move a card
+to a status the matrix would normally reject, add `--force` — it bypasses the
+transition rule (the target must still be a real status) and the move is
+recorded as *forced* in the card's audit trail:
+`kkullm card update <id> --status completed --force --as <agent>`
+
 ### Reading a card's audit trail
 
 `card events <id>` lists a card's append-only audit trail in chronological

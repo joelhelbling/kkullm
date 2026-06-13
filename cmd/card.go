@@ -198,6 +198,7 @@ var (
 	cardUpdateStatus       string
 	cardUpdateBlocked      bool
 	cardUpdateUnblocked    bool
+	cardUpdateForce        bool
 	cardUpdateReason       string
 	cardUpdateAssignees    []string
 	cardUpdateTags         []string
@@ -277,6 +278,11 @@ var cardUpdateCmd = &cobra.Command{
 				return err
 			}
 			req.Status = &cardUpdateStatus
+		}
+		// --force bypasses the transition matrix server-side. Status validity
+		// is still enforced. Available to anyone.
+		if cardUpdateForce {
+			req.Force = true
 		}
 		if cmd.Flags().Changed("assignee") {
 			req.Assignees = cardUpdateAssignees
@@ -404,6 +410,7 @@ func init() {
 	cardUpdateCmd.Flags().BoolVar(&cardUpdateBlocked, "blocked", false, "Set the blocked flag (leaves status and assignees intact)")
 	cardUpdateCmd.Flags().BoolVar(&cardUpdateUnblocked, "unblocked", false, "Clear the blocked flag (may combine with --status/--assignee)")
 	cardUpdateCmd.Flags().StringVar(&cardUpdateReason, "reason", "", "Reason for --blocked/--unblocked; posts a kinded comment")
+	cardUpdateCmd.Flags().BoolVar(&cardUpdateForce, "force", false, "Bypass the status-transition rules (still requires a valid status); recorded as a forced move")
 	cardUpdateCmd.Flags().StringSliceVar(&cardUpdateAssignees, "assignee", nil, "Assignee (repeatable)")
 	cardUpdateCmd.Flags().StringSliceVar(&cardUpdateTags, "tag", nil, "Tag (repeatable)")
 	cardUpdateCmd.Flags().IntSliceVar(&cardUpdateBlockedBy, "blocked-by", nil, "Blocked by card ID (repeatable)")

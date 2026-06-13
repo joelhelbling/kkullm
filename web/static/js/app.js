@@ -538,7 +538,16 @@ function kkullm() {
         }
       }
 
-      const url = '/ui/cards/' + cardId + '/status' + (unblock ? '?unblock=1' : '');
+      // Holding Alt while dropping forces the move past the transition rules
+      // (?force=1). SortableJS exposes the underlying pointer/key event as
+      // evt.originalEvent.
+      const orig = evt.originalEvent;
+      const force = !!(orig && orig.altKey);
+
+      const qs = [];
+      if (unblock) qs.push('unblock=1');
+      if (force) qs.push('force=1');
+      const url = '/ui/cards/' + cardId + '/status' + (qs.length ? '?' + qs.join('&') : '');
       fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
