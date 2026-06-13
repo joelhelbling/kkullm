@@ -96,14 +96,6 @@ var AllStatuses = []string{
 	"tabled",
 }
 
-var ValidTransitions = map[string]map[string]bool{
-	"considering": {"todo": true, "tabled": true},
-	"todo":        {"in_flight": true, "tabled": true},
-	"in_flight":   {"completed": true, "tabled": true},
-	"completed":   {"in_flight": true, "tabled": true},
-	"tabled":      {"considering": true, "todo": true},
-}
-
 // ValidCommentKinds is the set of accepted Comment.Kind values. "" is a normal
 // comment; "block"/"unblock" tag the note left when a card's blocked flag is
 // toggled, so the "why" lives in the card timeline.
@@ -116,24 +108,4 @@ var ValidCommentKinds = map[string]bool{
 // ValidCommentKind reports whether k is an accepted comment kind.
 func ValidCommentKind(k string) bool {
 	return ValidCommentKinds[k]
-}
-
-func CanTransition(from, to string) bool {
-	targets, ok := ValidTransitions[from]
-	if !ok {
-		return false
-	}
-	return targets[to]
-}
-
-func AllowedTransitions(from string) []string {
-	targets, ok := ValidTransitions[from]
-	if !ok {
-		return nil
-	}
-	result := make([]string, 0, len(targets))
-	for s := range targets {
-		result = append(result, s)
-	}
-	return result
 }

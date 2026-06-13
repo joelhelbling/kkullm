@@ -2,7 +2,6 @@ package store
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/joelhelbling/kkullm/model"
@@ -458,7 +457,7 @@ func TestUpdateCard(t *testing.T) {
 	}
 }
 
-func TestUpdateCardInvalidTransition(t *testing.T) {
+func TestUpdateCardAllowsAnyTransition(t *testing.T) {
 	s := setupTestDB(t)
 	proj := createTestProject(t, s)
 
@@ -471,61 +470,28 @@ func TestUpdateCardInvalidTransition(t *testing.T) {
 		t.Fatalf("CreateCard: %v", err)
 	}
 
-	// considering -> in_flight is invalid
-	_, err = s.UpdateCard(card.ID, CardUpdateParams{
-		Status: strPtr("in_flight"),
-	})
-	if err == nil {
-		t.Fatal("expected error for invalid transition considering -> in_flight, got nil")
-	}
-	if !strings.Contains(err.Error(), "invalid status transition") {
-		t.Errorf("error message = %q, expected 'invalid status transition'", err.Error())
-	}
-}
-
-func TestUpdateCardForceBypassesTransition(t *testing.T) {
-	s := setupTestDB(t)
-	proj := createTestProject(t, s)
-
-	card, err := s.CreateCard(CardCreateParams{
-		Title:     "Force test",
-		ProjectID: proj.ID,
-		Status:    "considering",
-	})
+	// considering -> completed was previously illegal; it is now allowed.
+	updated, err := s.UpdateCard(card.ID, CardUpdateParams{Status: strPtr("completed")})
 	if err != nil {
-		t.Fatalf("CreateCard: %v", err)
-	}
-
-	// considering -> completed is normally illegal. Without force it fails.
-	if _, err := s.UpdateCard(card.ID, CardUpdateParams{Status: strPtr("completed")}); err == nil {
-		t.Fatal("expected error for illegal transition considering -> completed without force")
-	}
-
-	// With force it succeeds.
-	updated, err := s.UpdateCard(card.ID, CardUpdateParams{Status: strPtr("completed"), Force: true})
-	if err != nil {
-		t.Fatalf("UpdateCard with Force: %v", err)
+		t.Fatalf("UpdateCard considering -> completed: %v", err)
 	}
 	if updated.Status != "completed" {
 		t.Errorf("status = %q, want %q", updated.Status, "completed")
 	}
 
-	// The status_changed event must be marked forced.
+	// The move is recorded in the audit trail.
 	events, err := s.ListCardEvents(card.ID)
 	if err != nil {
 		t.Fatalf("ListCardEvents: %v", err)
 	}
-	var statusEvent *model.CardEvent
-	for i := range events {
-		if events[i].EventType == "status_changed" {
-			statusEvent = &events[i]
+	var sawStatusChange bool
+	for _, e := range events {
+		if e.EventType == "status_changed" && e.ToValue == "completed" {
+			sawStatusChange = true
 		}
 	}
-	if statusEvent == nil {
-		t.Fatal("expected a status_changed event")
-	}
-	if !statusEvent.Forced {
-		t.Errorf("forced status_changed event Forced = false, want true")
+	if !sawStatusChange {
+		t.Error("expected a status_changed event recording the move to completed")
 	}
 }
 

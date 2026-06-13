@@ -437,28 +437,17 @@ func (s *Store) ListFormerlyAssignedBlockedCards(agentName string) ([]model.Card
 }
 
 func (s *Store) UpdateCard(id int, p CardUpdateParams) (*model.Card, error) {
-	// Validate status transition if status is changing. oldStatus is captured
-	// for the audit trail (a status_changed event records from->to).
+	// Capture the current status for the audit trail (a status_changed event
+	// records from->to). Any change to a valid status is allowed; only an
+	// unknown status (e.g. a typo) is rejected.
 	var oldStatus string
 	if p.Status != nil {
 		err := s.db.QueryRow("SELECT status FROM cards WHERE id = ?", id).Scan(&oldStatus)
 		if err != nil {
 			return nil, fmt.Errorf("get current status for card %d: %w", id, err)
 		}
-		if oldStatus != *p.Status {
-			if p.Force {
-				// Force bypasses the transition matrix but NOT status validity:
-				// a target that isn't a real status (e.g. a typo) still errors.
-				if !model.ValidStatuses[*p.Status] {
-					return nil, fmt.Errorf("invalid status %q", *p.Status)
-				}
-			} else if !model.CanTransition(oldStatus, *p.Status) {
-				allowed := model.AllowedTransitions(oldStatus)
-				return nil, fmt.Errorf(
-					"invalid status transition %q -> %q; allowed transitions from %q: %v",
-					oldStatus, *p.Status, oldStatus, allowed,
-				)
-			}
+		if oldStatus != *p.Status && !model.ValidStatuses[*p.Status] {
+			return nil, fmt.Errorf("invalid status %q", *p.Status)
 		}
 	}
 
