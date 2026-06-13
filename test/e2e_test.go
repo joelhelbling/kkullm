@@ -122,21 +122,21 @@ func TestFullWorkflow(t *testing.T) {
 		t.Fatalf("asset project = %q, want 'acme-backend'", assets[0].Project)
 	}
 
-	// 11. Verify invalid transition is rejected (tabled -> completed)
-	// First: completed -> in_flight (valid)
+	// 11. Any transition is now allowed (no transition rules).
+	// completed -> in_flight
 	_, err = c.UpdateCard(card.ID, client.CardUpdateRequest{Status: &status})
 	if err != nil {
-		t.Fatalf("completed -> in_flight should be valid: %v", err)
+		t.Fatalf("completed -> in_flight: %v", err)
 	}
-	// Then: in_flight -> tabled (valid)
+	// in_flight -> tabled
 	tabled := "tabled"
 	_, err = c.UpdateCard(card.ID, client.CardUpdateRequest{Status: &tabled})
 	if err != nil {
-		t.Fatalf("in_flight -> tabled should be valid: %v", err)
+		t.Fatalf("in_flight -> tabled: %v", err)
 	}
-	// tabled -> completed should fail (tabled only allows -> considering, todo)
+	// tabled -> completed was previously rejected; it is now allowed.
 	_, err = c.UpdateCard(card.ID, client.CardUpdateRequest{Status: &completed})
-	if err == nil {
-		t.Fatal("expected error for tabled -> completed transition")
+	if err != nil {
+		t.Fatalf("tabled -> completed should now be allowed: %v", err)
 	}
 }

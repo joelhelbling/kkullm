@@ -300,37 +300,6 @@ func TestStatusChangeReturnsDrawerOnResponseDrawer(t *testing.T) {
 	}
 }
 
-func TestStatusChangeInvalid(t *testing.T) {
-	mux, st := setupTestMuxWithStore(t)
-
-	card, err := st.CreateCard(store.CardCreateParams{
-		Title:     "Invalid transition test",
-		Status:    "considering",
-		ProjectID: 1,
-	})
-	if err != nil {
-		t.Fatalf("create card: %v", err)
-	}
-
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	// Invalid transition: considering -> in_flight (must go through todo first)
-	req, _ := http.NewRequest("PATCH",
-		ts.URL+fmt.Sprintf("/ui/cards/%d/status", card.ID),
-		strings.NewReader("status=in_flight"))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatalf("PATCH status: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 422 {
-		t.Fatalf("expected 422, got %d", resp.StatusCode)
-	}
-}
-
 func TestStatusChangeForce(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
@@ -378,11 +347,11 @@ func TestStatusChangeForce(t *testing.T) {
 	}
 }
 
-func TestStatusChangeWithoutForceStillRejects(t *testing.T) {
+func TestStatusChangeAllowsAnyTransition(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
 	card, err := st.CreateCard(store.CardCreateParams{
-		Title:     "No force rejection test",
+		Title:     "Any transition test",
 		Status:    "considering",
 		ProjectID: 1,
 	})
@@ -393,6 +362,7 @@ func TestStatusChangeWithoutForceStillRejects(t *testing.T) {
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
+	// considering -> completed was previously illegal; it now succeeds.
 	req, _ := http.NewRequest("PATCH",
 		ts.URL+fmt.Sprintf("/ui/cards/%d/status", card.ID),
 		strings.NewReader("status=completed"))
@@ -402,9 +372,27 @@ func TestStatusChangeWithoutForceStillRejects(t *testing.T) {
 		t.Fatalf("PATCH status: %v", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200 for any transition, got %d", resp.StatusCode)
+	}
 
-	if resp.StatusCode != 422 {
-		t.Fatalf("expected 422 without force, got %d", resp.StatusCode)
+	updated, _ := st.GetCard(card.ID)
+	if updated.Status != "completed" {
+		t.Errorf("status = %q, want %q", updated.Status, "completed")
+	}
+
+	// An unknown status is still rejected.
+	bad, _ := http.NewRequest("PATCH",
+		ts.URL+fmt.Sprintf("/ui/cards/%d/status", card.ID),
+		strings.NewReader("status=bogus"))
+	bad.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	badResp, err := http.DefaultClient.Do(bad)
+	if err != nil {
+		t.Fatalf("PATCH bad status: %v", err)
+	}
+	defer badResp.Body.Close()
+	if badResp.StatusCode != 422 {
+		t.Fatalf("expected 422 for unknown status, got %d", badResp.StatusCode)
 	}
 }
 
