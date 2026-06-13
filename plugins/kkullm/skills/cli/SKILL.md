@@ -102,6 +102,13 @@ current column, and the reason is recorded as a tagged comment in its timeline:
 When the blocker clears, unblock it (optionally moving it in the same call):
 `kkullm card update <id> --unblocked --status in_flight --as <agent>`
 
+### Reading a card's audit trail
+
+`card events <id>` lists a card's append-only audit trail in chronological
+order — every status transition and assignee add/remove, with the acting agent
+and a timestamp. It is a list-style read (it accepts `--json` and `--limit`):
+`kkullm card events <id> --json`
+
 ### Parsing output
 
 Always add `--json` when a script or agent consumes the result:

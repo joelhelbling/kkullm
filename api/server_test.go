@@ -271,6 +271,53 @@ func TestCardComments(t *testing.T) {
 	}
 }
 
+func TestCardEvents(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	// Create a card in the seeded orchestration project.
+	resp, err := http.Post(ts.URL+"/api/cards", "application/json",
+		strings.NewReader(`{"title":"Audited card","project":"orchestration"}`))
+	if err != nil {
+		t.Fatalf("POST card: %v", err)
+	}
+	defer resp.Body.Close()
+	var card model.Card
+	json.NewDecoder(resp.Body).Decode(&card)
+	cardID := strconv.Itoa(card.ID)
+
+	// Move it considering -> todo, which should append a status_changed event.
+	req, _ := http.NewRequest("PATCH", ts.URL+"/api/cards/"+cardID, strings.NewReader(`{"status":"todo"}`))
+	req.Header.Set("Content-Type", "application/json")
+	patchResp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("PATCH card: %v", err)
+	}
+	patchResp.Body.Close()
+
+	// Read the audit trail.
+	evResp, err := http.Get(ts.URL + "/api/cards/" + cardID + "/events")
+	if err != nil {
+		t.Fatalf("GET events: %v", err)
+	}
+	defer evResp.Body.Close()
+	if evResp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", evResp.StatusCode)
+	}
+
+	var events []model.CardEvent
+	json.NewDecoder(evResp.Body).Decode(&events)
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	if events[0].EventType != "status_changed" {
+		t.Errorf("event type = %q, want status_changed", events[0].EventType)
+	}
+	if events[0].FromValue != "considering" || events[0].ToValue != "todo" {
+		t.Errorf("event from/to = %q/%q, want considering/todo", events[0].FromValue, events[0].ToValue)
+	}
+}
+
 func TestServerEventBus(t *testing.T) {
 	database, err := db.Open(":memory:")
 	if err != nil {

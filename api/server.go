@@ -43,6 +43,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PATCH /api/cards/{id}", s.updateCard)
 	mux.HandleFunc("DELETE /api/cards/{id}", s.deleteCard)
 
+	// Card audit trail
+	mux.HandleFunc("GET /api/cards/{id}/events", s.listCardEvents)
+
 	// Comments
 	mux.HandleFunc("GET /api/cards/{id}/comments", s.listComments)
 	mux.HandleFunc("POST /api/cards/{id}/comments", s.createComment)

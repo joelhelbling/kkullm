@@ -101,6 +101,42 @@ var cardGetCmd = &cobra.Command{
 	},
 }
 
+// --- card events ---
+
+var cardEventsCmd = &cobra.Command{
+	Use:   "events <id>",
+	Short: "List a card's audit trail (status and assignment changes)",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		id, err := parseID(args[0])
+		if err != nil {
+			return err
+		}
+		c := client.New(serverURL)
+		events, err := c.ListCardEvents(id)
+		if err != nil {
+			return err
+		}
+		return emitList(events, func(e model.CardEvent) {
+			actor := e.Actor
+			if actor == "" {
+				actor = "-"
+			}
+			detail := ""
+			switch {
+			case e.FromValue != "" && e.ToValue != "":
+				detail = e.FromValue + " -> " + e.ToValue
+			case e.ToValue != "":
+				detail = e.ToValue
+			case e.FromValue != "":
+				detail = e.FromValue
+			}
+			fmt.Printf("[%s] %s %s %s\n",
+				e.CreatedAt.Format("2006-01-02 15:04:05"), actor, e.EventType, detail)
+		})
+	},
+}
+
 // --- card create ---
 
 var (
@@ -376,6 +412,7 @@ func init() {
 
 	cardCmd.AddCommand(cardListCmd)
 	cardCmd.AddCommand(cardGetCmd)
+	cardCmd.AddCommand(cardEventsCmd)
 	cardCmd.AddCommand(cardCreateCmd)
 	cardCmd.AddCommand(cardUpdateCmd)
 	rootCmd.AddCommand(cardCmd)

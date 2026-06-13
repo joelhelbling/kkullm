@@ -138,6 +138,24 @@ func (s *Server) updateCard(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, card)
 }
 
+func (s *Server) listCardEvents(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		writeError(w, 400, "invalid id")
+		return
+	}
+
+	events, err := s.store.ListCardEvents(id)
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	if events == nil {
+		events = []model.CardEvent{}
+	}
+	writeJSON(w, 200, events)
+}
+
 func (s *Server) deleteCard(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
