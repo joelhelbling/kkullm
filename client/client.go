@@ -12,16 +12,27 @@ import (
 	"github.com/joelhelbling/kkullm/model"
 )
 
+// agentHeader carries the acting-agent identity (the CLI's --as / KKULLM_AGENT)
+// to the API on every request, so mutations can be attributed in the audit trail.
+const agentHeader = "X-Kkullm-Agent"
+
 type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
+	// Agent is the acting-agent identity sent on every request via the
+	// X-Kkullm-Agent header. Empty for read-only/anonymous use.
+	Agent string
 }
 
-func New(baseURL string) *Client {
-	return &Client{
+func New(baseURL string, agent ...string) *Client {
+	c := &Client{
 		BaseURL:    baseURL,
 		HTTPClient: &http.Client{},
 	}
+	if len(agent) > 0 {
+		c.Agent = agent[0]
+	}
+	return c
 }
 
 type apiError struct {
@@ -44,6 +55,9 @@ func (c *Client) do(method, path string, body any, result any) error {
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	if c.Agent != "" {
+		req.Header.Set(agentHeader, c.Agent)
 	}
 
 	resp, err := c.HTTPClient.Do(req)

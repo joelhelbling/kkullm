@@ -154,7 +154,7 @@ var cardCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a new card",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		requireAgent()
+		agent := requireAgent()
 		project := projectName
 		if project == "" {
 			return fmt.Errorf("project is required: use --project flag or set KKULLM_PROJECT")
@@ -181,7 +181,7 @@ var cardCreateCmd = &cobra.Command{
 			return emitDryRun(fmt.Sprintf("would create card %q in project %q", req.Title, project), req)
 		}
 
-		c := client.New(serverURL)
+		c := client.New(serverURL, agent)
 		card, err := c.CreateCard(req)
 		if err != nil {
 			return err
@@ -303,7 +303,7 @@ var cardUpdateCmd = &cobra.Command{
 			return emitDryRun(fmt.Sprintf("would update card #%d", id), preview)
 		}
 
-		c := client.New(serverURL)
+		c := client.New(serverURL, agent)
 		card, err := c.UpdateCard(id, req)
 		if err != nil {
 			return err

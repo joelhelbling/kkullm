@@ -14,6 +14,11 @@ import (
 	"github.com/joelhelbling/kkullm/store"
 )
 
+// webOperator is the acting-agent identity attributed to web-driven mutations
+// in the card audit trail. The web UI authors changes (and comments, via the
+// seeded "user" agent) on behalf of the human operator.
+const webOperator = "user"
+
 // renderError writes a user-facing error response and logs the underlying
 // detail. The publicMsg is what the browser sees; err is for the server log.
 func renderError(w http.ResponseWriter, code int, publicMsg string, err error) {
@@ -325,7 +330,7 @@ func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	params := store.CardUpdateParams{Status: &newStatus}
+	params := store.CardUpdateParams{Status: &newStatus, Actor: webOperator}
 	unblock := wantsUnblock(r)
 	if unblock {
 		blocked := false
@@ -672,6 +677,7 @@ func (ws *WebServer) handleEditCard(w http.ResponseWriter, r *http.Request) {
 	updated, err := ws.store.UpdateCard(id, store.CardUpdateParams{
 		Title: &title,
 		Body:  &body,
+		Actor: webOperator,
 	})
 	if err != nil {
 		ws.renderDrawerWith(w, card, "", err.Error())
@@ -715,7 +721,7 @@ func (ws *WebServer) handleAssignCard(w http.ResponseWriter, r *http.Request) {
 		assignees = []string{}
 	}
 
-	params := store.CardUpdateParams{Assignees: assignees}
+	params := store.CardUpdateParams{Assignees: assignees, Actor: webOperator}
 	unblock := wantsUnblock(r)
 	if unblock {
 		blocked := false
@@ -772,7 +778,7 @@ func (ws *WebServer) setBlocked(w http.ResponseWriter, r *http.Request, blocked 
 
 	reason := strings.TrimSpace(r.FormValue("reason"))
 
-	updated, err := ws.store.UpdateCard(id, store.CardUpdateParams{Blocked: &blocked})
+	updated, err := ws.store.UpdateCard(id, store.CardUpdateParams{Blocked: &blocked, Actor: webOperator})
 	if err != nil {
 		ws.renderDrawerWith(w, card, "", err.Error())
 		return
