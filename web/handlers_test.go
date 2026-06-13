@@ -1666,3 +1666,93 @@ func TestDrawerShowsBlockStateAndReason(t *testing.T) {
 }
 
 func boolPtr32(b bool) *bool { return &b }
+
+// TestBlockedViewShowsOnlyBlockedCardsAcrossProjects exercises the orchestrator
+// "blocked" triage view: it lists every blocked card, across all projects, each
+// in its real status column, surfacing the latest kind="block" reason. Unblocked
+// cards must not appear.
+func TestBlockedViewShowsOnlyBlockedCardsAcrossProjects(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	// Blocked card in the seeded "orchestration" project (id 1), status in_flight.
+	blocked, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Blocked orchestration card",
+		Status:    "in_flight",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create blocked card: %v", err)
+	}
+	if _, err := st.UpdateCard(blocked.ID, store.CardUpdateParams{Blocked: boolPtr32(true)}); err != nil {
+		t.Fatalf("set blocked: %v", err)
+	}
+	// The "why" lives in a kind="block" comment (user agent id 1 from seed).
+	if _, err := st.CreateComment(blocked.ID, 1, "waiting on credentials", "block"); err != nil {
+		t.Fatalf("create block comment: %v", err)
+	}
+
+	// A blocked card in a second project, status todo.
+	other, err := st.CreateProject("other-project", "")
+	if err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+	blocked2, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Blocked other-project card",
+		Status:    "todo",
+		ProjectID: other.ID,
+	})
+	if err != nil {
+		t.Fatalf("create blocked card 2: %v", err)
+	}
+	if _, err := st.UpdateCard(blocked2.ID, store.CardUpdateParams{Blocked: boolPtr32(true)}); err != nil {
+		t.Fatalf("set blocked 2: %v", err)
+	}
+
+	// A NON-blocked card that must be excluded from the view.
+	if _, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Unblocked card",
+		Status:    "todo",
+		ProjectID: 1,
+	}); err != nil {
+		t.Fatalf("create unblocked card: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/ui/blocked")
+	if err != nil {
+		t.Fatalf("GET /ui/blocked: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	// Both blocked cards appear, across projects.
+	if !strings.Contains(body, "Blocked orchestration card") {
+		t.Error("expected blocked view to contain the blocked orchestration card")
+	}
+	if !strings.Contains(body, "Blocked other-project card") {
+		t.Error("expected blocked view to contain the blocked other-project card")
+	}
+	// The unblocked card must be excluded.
+	if strings.Contains(body, "Unblocked card") {
+		t.Error("blocked view leaked an unblocked card")
+	}
+	// The block reason from the kind=\"block\" comment is surfaced.
+	if !strings.Contains(body, "waiting on credentials") {
+		t.Error("expected blocked view to surface the block reason")
+	}
+	// Cards span projects, so the cross-project label/badge is shown.
+	if !strings.Contains(body, "other-project") {
+		t.Error("expected blocked view to show the project label (showProject)")
+	}
+	// Each blocked card still renders in its real status column. The blocked
+	// card sits in in_flight; its column header must be present.
+	if !strings.Contains(body, `data-status="in_flight"`) {
+		t.Error("expected blocked view to render real status columns")
+	}
+}

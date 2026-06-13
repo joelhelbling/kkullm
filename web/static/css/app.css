@@ -754,6 +754,51 @@ body::before {
   font-size: 10px;
 }
 
+/* Orchestrator blocked view: each tile is paired with the active block reason
+   (sourced from the latest kind="block" comment) shown directly beneath it. */
+.blocked-card-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.blocked-card-wrap .card-tile {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.blocked-reason {
+  margin-top: -1px;
+  padding: 7px 10px 8px;
+  border: 1px solid var(--status-blocked);
+  border-top: none;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  background: var(--status-blocked-tint);
+}
+
+.blocked-reason-why {
+  font-size: 12px;
+  color: var(--text-primary);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.blocked-reason-meta {
+  margin-top: 4px;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.blocked-reason-who {
+  font-weight: 600;
+  color: var(--status-blocked);
+}
+
 /* Drawer block/unblock controls */
 .drawer-block-section .drawer-block-state {
   display: flex;

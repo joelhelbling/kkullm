@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joelhelbling/kkullm/api"
 	"github.com/joelhelbling/kkullm/model"
@@ -195,6 +196,21 @@ func latestBlockReason(comments []model.Comment) string {
 		}
 	}
 	return reason
+}
+
+// latestBlockComment returns the most recent kind="block" comment (the active
+// block note), or nil if the card has no block note. comments are assumed
+// ascending by created_at (as ListComments returns them), so the last block
+// entry wins. Unblock notes don't override — the orchestrator view wants the
+// reason a card is currently blocked, sourced from the active block.
+func latestBlockComment(comments []model.Comment) *model.Comment {
+	var found *model.Comment
+	for i := range comments {
+		if comments[i].Kind == "block" {
+			found = &comments[i]
+		}
+	}
+	return found
 }
 
 func buildStatusPills(current string) []statusPill {
@@ -506,6 +522,80 @@ func (ws *WebServer) renderArchived(w http.ResponseWriter, params store.CardList
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "archived", data); err != nil {
 		log.Printf("render archived: %v", err)
+	}
+}
+
+// blockedCardView is a board tile for the orchestrator blocked view, carrying
+// the active block reason/who/when sourced from the latest kind="block" comment
+// so the operator can triage without opening each card.
+type blockedCardView struct {
+	cardView
+	BlockReason string
+	BlockedBy   string
+	BlockedAt   time.Time
+	HasBlock    bool
+}
+
+// blockedData mirrors boardData but holds blockedCardViews, so the blocked view
+// can render each card in its real status column with the block reason inline.
+type blockedData struct {
+	Considering []blockedCardView
+	Todo        []blockedCardView
+	InFlight    []blockedCardView
+	Completed   []blockedCardView
+	Tabled      []blockedCardView
+	ShowProject bool
+}
+
+// handleBlockedView is the orchestrator's global triage surface: every blocked
+// card, across all projects, each still sitting in its real status column, with
+// the active block reason/who/when surfaced inline. Clicking a card opens the
+// existing drawer (with the #32 unblock/reassign controls). Gated by
+// RequireAdmin (operator-only) — see RegisterRoutes.
+func (ws *WebServer) handleBlockedView(w http.ResponseWriter, r *http.Request) {
+	blocked := true
+	cards, err := ws.store.ListCards(store.CardListParams{
+		Blocked:      &blocked,
+		ArchiveLimit: webArchiveLimit,
+	})
+	if err != nil {
+		renderError(w, 500, "internal error", err)
+		return
+	}
+
+	// Cards span projects here, so tiles show their project label.
+	data := blockedData{ShowProject: true}
+	for _, c := range cards {
+		bcv := blockedCardView{cardView: cardView{Card: c, ShowProject: true}}
+		// Surface the active block note (who/when/why) from the card's timeline.
+		if comments, cErr := ws.store.ListComments(c.ID); cErr == nil {
+			if bc := latestBlockComment(comments); bc != nil {
+				bcv.BlockReason = bc.Body
+				bcv.BlockedBy = bc.Agent
+				bcv.BlockedAt = bc.CreatedAt
+				bcv.HasBlock = true
+			}
+		} else {
+			log.Printf("blocked view: list comments for card %d: %v", c.ID, cErr)
+		}
+
+		switch c.Status {
+		case "considering":
+			data.Considering = append(data.Considering, bcv)
+		case "todo":
+			data.Todo = append(data.Todo, bcv)
+		case "in_flight":
+			data.InFlight = append(data.InFlight, bcv)
+		case "completed":
+			data.Completed = append(data.Completed, bcv)
+		case "tabled":
+			data.Tabled = append(data.Tabled, bcv)
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(w, "blocked_view", data); err != nil {
+		log.Printf("render blocked view: %v", err)
 	}
 }
 

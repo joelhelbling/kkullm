@@ -1,0 +1,83 @@
+{{define "blocked_view"}}
+<template x-init="inArchive = true"></template>
+<div class="archived-view">
+  <div class="archived-header">
+    <div>
+      <div class="archived-title">Blocked</div>
+      <div class="archived-scope">all projects · orchestrator triage · {{len .Considering}}+{{len .Todo}}+{{len .InFlight}}+{{len .Completed}}+{{len .Tabled}} blocked</div>
+    </div>
+    <a class="archived-back"
+       hx-get="/ui/board"
+       hx-target="#board-container"
+       hx-swap="innerHTML"
+       href="#">← Back to board</a>
+  </div>
+
+  <div class="board" id="board">
+    <div class="column" data-status="considering">
+      <div class="column-header">
+        <span>Considering</span>
+        <span class="column-count">{{len .Considering}}</span>
+      </div>
+      <div class="column-cards" data-status="considering">
+        {{range .Considering}}{{template "blocked_tile" .}}{{end}}
+      </div>
+    </div>
+
+    <div class="column" data-status="todo">
+      <div class="column-header">
+        <span>Todo</span>
+        <span class="column-count">{{len .Todo}}</span>
+      </div>
+      <div class="column-cards" data-status="todo">
+        {{range .Todo}}{{template "blocked_tile" .}}{{end}}
+      </div>
+    </div>
+
+    <div class="column" data-status="in_flight">
+      <div class="column-header">
+        <span>In Flight</span>
+        <span class="column-count">{{len .InFlight}}</span>
+      </div>
+      <div class="column-cards" data-status="in_flight">
+        {{range .InFlight}}{{template "blocked_tile" .}}{{end}}
+      </div>
+    </div>
+
+    <div class="column" data-status="completed">
+      <div class="column-header">
+        <span>Completed</span>
+        <span class="column-count">{{len .Completed}}</span>
+      </div>
+      <div class="column-cards" data-status="completed">
+        {{range .Completed}}{{template "blocked_tile" .}}{{end}}
+      </div>
+    </div>
+
+    <div class="column" data-status="tabled">
+      <div class="column-header">
+        <span>Tabled</span>
+        <span class="column-count">{{len .Tabled}}</span>
+      </div>
+      <div class="column-cards" data-status="tabled">
+        {{range .Tabled}}{{template "blocked_tile" .}}{{end}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "blocked_tile"}}
+<div class="blocked-card-wrap">
+  {{template "card" .}}
+  {{if .HasBlock}}
+  <div class="blocked-reason" aria-label="Block reason">
+    <div class="blocked-reason-why">{{.BlockReason}}</div>
+    <div class="blocked-reason-meta">
+      {{if .BlockedBy}}<span class="blocked-reason-who">{{.BlockedBy}}</span>{{end}}
+      <span class="blocked-reason-when">{{timeAgo .BlockedAt}}</span>
+    </div>
+  </div>
+  {{end}}
+</div>
+{{end}}
