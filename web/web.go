@@ -32,6 +32,12 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	// Archived view (older completed/tabled cards beyond the board's cap)
 	mux.HandleFunc("GET /ui/archived", ws.handleArchived)
 
+	// Orchestrator blocked view: every blocked card across all projects, each
+	// in its real status column, with the block reason surfaced. Operator-only,
+	// so it routes through RequireAdmin (the same chokepoint as the other admin
+	// surfaces; pass-through today).
+	mux.Handle("GET /ui/blocked", RequireAdmin(http.HandlerFunc(ws.handleBlockedView)))
+
 	// Card detail drawer
 	mux.HandleFunc("GET /ui/cards/{id}/drawer", ws.handleDrawer)
 

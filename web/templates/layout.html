@@ -90,6 +90,12 @@
           </svg>
         </button>
         <div class="nav-menu-dropdown" x-show="open" x-cloak x-transition.opacity.duration.120ms role="menu">
+          <a class="nav-menu-item" role="menuitem"
+             hx-get="/ui/blocked"
+             hx-target="#board-container"
+             hx-swap="innerHTML"
+             @click="open = false"
+             href="#">Blocked</a>
           <a href="/admin" class="nav-menu-item" role="menuitem">Admin</a>
           <button type="button" class="nav-menu-item" role="menuitem" @click="toggleTheme(); open = false">
             <span x-text="theme === 'dark' ? 'Light mode' : 'Dark mode'"></span>
