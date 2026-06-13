@@ -31,7 +31,7 @@
       </div>
     </form>
   </div>
-  <button class="drawer-close" @click="closeDrawer()">✕</button>
+  <button class="drawer-close" x-show="!editing" @click="closeDrawer()">✕</button>
 </div>
 
 <div class="drawer-scroll-wrap">
