@@ -13,6 +13,7 @@ function kkullm() {
     theme: 'light',
     boardLoaded: false,
     inArchive: false,
+    altHeld: false,
 
     // Compose modal
     composeOpen: false,
@@ -33,6 +34,10 @@ function kkullm() {
       this.bootstrapData();
       this.initTheme();
       this.connectSSE();
+
+      document.addEventListener('keydown', (e) => { if (e.key === 'Alt') this.altHeld = true; });
+      document.addEventListener('keyup',   (e) => { if (e.key === 'Alt') this.altHeld = false; });
+      window.addEventListener('blur',      ()  => { this.altHeld = false; });
 
       // htmx:afterSettle runs after htmx is done manipulating attributes,
       // so our DOM edits won't be overwritten by htmx's attribute merging.
@@ -512,9 +517,28 @@ function kkullm() {
           animation: 200,
           ghostClass: 'sortable-ghost',
           chosenClass: 'sortable-chosen',
+          onStart: (evt) => {
+            const oe = evt.originalEvent;
+            if (oe && typeof oe.altKey === 'boolean') this.altHeld = oe.altKey;
+          },
           onEnd: (evt) => this.onCardDrop(evt),
         });
       });
+    },
+
+    // Restore a dropped card to its pre-drag position in the original column.
+    // SortableJS has already moved the DOM node to evt.to by the time onEnd
+    // fires, so appendChild(cardEl) would drop it at the bottom. Re-insert at
+    // the original index instead.
+    revertDrag(evt) {
+      const cardEl = evt.item;
+      const siblings = evt.from.children;
+      const idx = evt.oldDraggableIndex;
+      if (idx == null || idx >= siblings.length) {
+        evt.from.appendChild(cardEl);
+      } else {
+        evt.from.insertBefore(cardEl, siblings[idx]);
+      }
     },
 
     onCardDrop(evt) {
@@ -533,16 +557,15 @@ function kkullm() {
         if (window.confirm('This card is blocked. Unblock it as you move it to ' + newStatus + '?')) {
           unblock = true;
         } else {
-          evt.from.appendChild(cardEl);
+          this.revertDrag(evt);
           return;
         }
       }
 
-      // Holding Alt while dropping forces the move past the transition rules
-      // (?force=1). SortableJS exposes the underlying pointer/key event as
-      // evt.originalEvent.
-      const orig = evt.originalEvent;
-      const force = !!(orig && orig.altKey);
+      // altHeld is tracked via document keydown/keyup + snapshotted at drag
+      // start (onStart), because evt.originalEvent.altKey is unreliable at drop
+      // time in Chrome/Safari (it works in Firefox). See #62.
+      const force = this.altHeld;
 
       const qs = [];
       if (unblock) qs.push('unblock=1');
@@ -554,7 +577,7 @@ function kkullm() {
         body: 'status=' + encodeURIComponent(newStatus),
       }).then((resp) => {
         if (!resp.ok) {
-          evt.from.appendChild(cardEl);
+          this.revertDrag(evt);
           resp.text().then((msg) => this.showToast(msg, 'error'));
         } else {
           resp.text().then((html) => {
