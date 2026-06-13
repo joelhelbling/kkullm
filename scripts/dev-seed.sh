@@ -102,9 +102,18 @@ create_agent() {
 
 # create_card <project> <as_agent> <title> <status> [extra flags...]
 # Echoes the new card ID to stdout.
+#
+# `blocked` is no longer a status — it's an orthogonal flag. Passing "blocked"
+# here creates the card in `todo` and then sets the blocked flag via
+# `card update`, posting a kinded block comment, so call sites stay readable.
 create_card() {
   local project=$1 as_agent=$2 title=$3 status=$4
   shift 4
+  local set_blocked=0
+  if [[ "$status" == "blocked" ]]; then
+    set_blocked=1
+    status=todo
+  fi
   local output
   output=$(kk --as "$as_agent" --project "$project" card create \
     --title "$title" --status "$status" "$@")
@@ -113,6 +122,10 @@ create_card() {
   if [[ -z "$id" ]]; then
     echo "error: could not parse card id from output: $output" >&2
     exit 1
+  fi
+  if [[ "$set_blocked" == "1" ]]; then
+    kk --as "$as_agent" --project "$project" card update "$id" \
+      --blocked --reason "Blocked by an upstream dependency." >/dev/null
   fi
   echo "$id"
 }
