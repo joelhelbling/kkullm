@@ -10,6 +10,7 @@ import (
 
 	"github.com/joelhelbling/kkullm/api"
 	"github.com/joelhelbling/kkullm/model"
+	"github.com/joelhelbling/kkullm/store"
 )
 
 type adminProjectRow struct {
@@ -50,6 +51,24 @@ type adminAgentsData struct {
 	Projects []model.Project // populates the create modal's project <select>
 	Error    string
 	Form     adminAgentForm
+	Reopen   string // "", "create", or "edit"
+}
+
+// adminAssetForm carries submitted values for an error re-render.
+type adminAssetForm struct {
+	ID          int
+	Name        string
+	Project     string
+	Description string
+	URL         string
+}
+
+type adminAssetsData struct {
+	Section  string
+	Assets   []model.ProjectAsset
+	Projects []model.Project // populates the create modal's project <select>
+	Error    string
+	Form     adminAssetForm
 	Reopen   string // "", "create", or "edit"
 }
 
@@ -340,6 +359,127 @@ func (ws *WebServer) handleAdminDeleteAgent(w http.ResponseWriter, r *http.Reque
 	}
 	ws.broadcastAgentDeleted(id)
 	http.Redirect(w, r, "/admin/agents", http.StatusSeeOther)
+}
+
+func (ws *WebServer) handleAdminAssets(w http.ResponseWriter, r *http.Request) {
+	data, err := ws.assetsPageData()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	ws.renderAssetsPage(w, http.StatusOK, data)
+}
+
+func (ws *WebServer) assetsPageData() (adminAssetsData, error) {
+	assets, err := ws.store.ListAssets(store.AssetListParams{})
+	if err != nil {
+		return adminAssetsData{}, err
+	}
+	projects, err := ws.store.ListProjects()
+	if err != nil {
+		return adminAssetsData{}, err
+	}
+	return adminAssetsData{Section: "assets", Assets: assets, Projects: projects}, nil
+}
+
+func (ws *WebServer) renderAssetsPage(w http.ResponseWriter, status int, data adminAssetsData) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
+	if err := tmpl.ExecuteTemplate(w, "admin_assets", data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (ws *WebServer) renderAssetError(w http.ResponseWriter, msg string, form adminAssetForm, reopen string) {
+	data, err := ws.assetsPageData()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data.Error = msg
+	data.Form = form
+	data.Reopen = reopen
+	ws.renderAssetsPage(w, http.StatusBadRequest, data)
+}
+
+func (ws *WebServer) handleAdminCreateAsset(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	projectName := strings.TrimSpace(r.FormValue("project"))
+	description := strings.TrimSpace(r.FormValue("description"))
+	assetURL := strings.TrimSpace(r.FormValue("url"))
+	form := adminAssetForm{Name: name, Project: projectName, Description: description, URL: assetURL}
+
+	if name == "" {
+		ws.renderAssetError(w, "Asset name is required.", form, "create")
+		return
+	}
+	if projectName == "" {
+		ws.renderAssetError(w, "Please choose a project for the asset.", form, "create")
+		return
+	}
+	project, err := ws.store.GetProjectByName(projectName)
+	if err != nil {
+		ws.renderAssetError(w, fmt.Sprintf("Project %q was not found.", projectName), form, "create")
+		return
+	}
+	if _, err := ws.store.CreateAsset(project.ID, name, description, assetURL); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/admin/assets", http.StatusSeeOther)
+}
+
+func (ws *WebServer) handleAdminUpdateAsset(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	description := strings.TrimSpace(r.FormValue("description"))
+	assetURL := strings.TrimSpace(r.FormValue("url"))
+	form := adminAssetForm{ID: id, Name: name, Description: description, URL: assetURL}
+	// The asset's project is fixed; look it up so an error re-render can show
+	// it read-only in the reopened edit modal.
+	if asset, err := ws.store.GetAsset(id); err == nil {
+		form.Project = asset.Project
+	}
+
+	if name == "" {
+		ws.renderAssetError(w, "Asset name is required.", form, "edit")
+		return
+	}
+	if err := ws.store.UpdateAsset(id, name, description, assetURL); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/admin/assets", http.StatusSeeOther)
+}
+
+func (ws *WebServer) handleAdminDeleteAsset(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "bad id", http.StatusBadRequest)
+		return
+	}
+	if err := ws.store.DeleteAsset(id); err != nil {
+		// Stale id (not found) is an idempotent recovery.
+		if errors.Is(err, sql.ErrNoRows) || strings.Contains(err.Error(), "not found") {
+			http.Redirect(w, r, "/admin/assets", http.StatusSeeOther)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/admin/assets", http.StatusSeeOther)
 }
 
 func (ws *WebServer) handleAdminDanger(w http.ResponseWriter, r *http.Request) {

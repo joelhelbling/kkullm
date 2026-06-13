@@ -91,6 +91,36 @@ func (s *Store) ListAssets(params AssetListParams) ([]model.ProjectAsset, error)
 	return assets, rows.Err()
 }
 
+func (s *Store) UpdateAsset(id int, name, description, url string) error {
+	if name == "" {
+		return fmt.Errorf("asset name cannot be empty")
+	}
+	res, err := s.db.Exec(
+		"UPDATE project_assets SET name = ?, description = ?, url = ?, updated_at = datetime('now') WHERE id = ?",
+		name, nilIfEmpty(description), nilIfEmpty(url), id,
+	)
+	if err != nil {
+		return fmt.Errorf("update asset %d: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("asset %d not found", id)
+	}
+	return nil
+}
+
+func (s *Store) DeleteAsset(id int) error {
+	res, err := s.db.Exec("DELETE FROM project_assets WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("delete asset %d: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("asset %d not found", id)
+	}
+	return nil
+}
+
 func nilIfEmpty(s string) *string {
 	if s == "" {
 		return nil

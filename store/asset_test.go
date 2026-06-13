@@ -82,3 +82,75 @@ func TestGetAsset(t *testing.T) {
 		t.Errorf("project = %q, want 'test-project'", got.Project)
 	}
 }
+
+func TestUpdateAsset(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+
+	created, _ := s.CreateAsset(proj.ID, "Old name", "old desc", "https://old.example.com")
+
+	if err := s.UpdateAsset(created.ID, "New name", "new desc", "https://new.example.com"); err != nil {
+		t.Fatalf("UpdateAsset: %v", err)
+	}
+
+	got, err := s.GetAsset(created.ID)
+	if err != nil {
+		t.Fatalf("GetAsset: %v", err)
+	}
+	if got.Name != "New name" {
+		t.Errorf("name = %q, want 'New name'", got.Name)
+	}
+	if got.Description != "new desc" {
+		t.Errorf("description = %q, want 'new desc'", got.Description)
+	}
+	if got.URL != "https://new.example.com" {
+		t.Errorf("url = %q, want 'https://new.example.com'", got.URL)
+	}
+}
+
+func TestUpdateAssetEmptyName(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	created, _ := s.CreateAsset(proj.ID, "Name", "", "")
+
+	if err := s.UpdateAsset(created.ID, "", "", ""); err == nil {
+		t.Errorf("expected error for empty name, got nil")
+	}
+}
+
+func TestUpdateAssetClearsOptionalFields(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	created, _ := s.CreateAsset(proj.ID, "Name", "desc", "https://x.example.com")
+
+	if err := s.UpdateAsset(created.ID, "Name", "", ""); err != nil {
+		t.Fatalf("UpdateAsset: %v", err)
+	}
+	got, _ := s.GetAsset(created.ID)
+	if got.Description != "" {
+		t.Errorf("description = %q, want empty", got.Description)
+	}
+	if got.URL != "" {
+		t.Errorf("url = %q, want empty", got.URL)
+	}
+}
+
+func TestDeleteAsset(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	created, _ := s.CreateAsset(proj.ID, "Doomed", "", "")
+
+	if err := s.DeleteAsset(created.ID); err != nil {
+		t.Fatalf("DeleteAsset: %v", err)
+	}
+	if _, err := s.GetAsset(created.ID); err == nil {
+		t.Errorf("expected asset to be gone after delete")
+	}
+}
+
+func TestDeleteAssetNotFound(t *testing.T) {
+	s := setupTestDB(t)
+	if err := s.DeleteAsset(99999); err == nil {
+		t.Errorf("expected error deleting nonexistent asset, got nil")
+	}
+}

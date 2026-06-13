@@ -60,6 +60,7 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	mux.Handle("GET /admin", RequireAdmin(http.HandlerFunc(ws.handleAdminRoot)))
 	mux.Handle("GET /admin/projects", RequireAdmin(http.HandlerFunc(ws.handleAdminProjects)))
 	mux.Handle("GET /admin/agents", RequireAdmin(http.HandlerFunc(ws.handleAdminAgents)))
+	mux.Handle("GET /admin/assets", RequireAdmin(http.HandlerFunc(ws.handleAdminAssets)))
 	mux.Handle("GET /admin/danger", RequireAdmin(http.HandlerFunc(ws.handleAdminDanger)))
 	mux.Handle("POST /admin/projects/create", RequireAdmin(http.HandlerFunc(ws.handleAdminCreateProject)))
 	mux.Handle("POST /admin/projects/{id}/update", RequireAdmin(http.HandlerFunc(ws.handleAdminUpdateProject)))
@@ -67,6 +68,9 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	mux.Handle("POST /admin/agents/create", RequireAdmin(http.HandlerFunc(ws.handleAdminCreateAgent)))
 	mux.Handle("POST /admin/agents/{id}/update", RequireAdmin(http.HandlerFunc(ws.handleAdminUpdateAgent)))
 	mux.Handle("POST /admin/agents/{id}/delete", RequireAdmin(http.HandlerFunc(ws.handleAdminDeleteAgent)))
+	mux.Handle("POST /admin/assets/create", RequireAdmin(http.HandlerFunc(ws.handleAdminCreateAsset)))
+	mux.Handle("POST /admin/assets/{id}/update", RequireAdmin(http.HandlerFunc(ws.handleAdminUpdateAsset)))
+	mux.Handle("POST /admin/assets/{id}/delete", RequireAdmin(http.HandlerFunc(ws.handleAdminDeleteAsset)))
 	mux.Handle("POST /admin/danger/purge", RequireAdmin(http.HandlerFunc(ws.handleAdminPurge)))
 
 	// Static files (no-cache during development so edits are visible on reload)
