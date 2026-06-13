@@ -693,6 +693,8 @@ function kkullm() {
     isCardInScope(card) {
       if (card.status === 'blocked') return true;
       if (this.viewMode === 'project') {
+        // The "All projects" view shows every project's cards.
+        if (this.currentProject === 'all') return true;
         const p = this.projects.find((p) => String(p.id) === String(this.currentProject));
         return !!p && card.project === p.name;
       }

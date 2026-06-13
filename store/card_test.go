@@ -245,6 +245,54 @@ func TestListCardsFiltered(t *testing.T) {
 	}
 }
 
+// TestListCardsAcrossAllProjects verifies that listing with no Project filter
+// aggregates cards from every project — the store-level behavior behind the
+// board's "All projects" selector option.
+func TestListCardsAcrossAllProjects(t *testing.T) {
+	s := setupTestDB(t)
+
+	projA, err := s.CreateProject("alpha", "")
+	if err != nil {
+		t.Fatalf("CreateProject(alpha): %v", err)
+	}
+	projB, err := s.CreateProject("beta", "")
+	if err != nil {
+		t.Fatalf("CreateProject(beta): %v", err)
+	}
+
+	if _, err := s.CreateCard(CardCreateParams{Title: "card in alpha", ProjectID: projA.ID}); err != nil {
+		t.Fatalf("CreateCard(alpha): %v", err)
+	}
+	if _, err := s.CreateCard(CardCreateParams{Title: "card in beta", ProjectID: projB.ID}); err != nil {
+		t.Fatalf("CreateCard(beta): %v", err)
+	}
+
+	// Empty Project filter = all projects.
+	cards, err := s.ListCards(CardListParams{})
+	if err != nil {
+		t.Fatalf("ListCards(all): %v", err)
+	}
+
+	seen := map[string]bool{}
+	for _, c := range cards {
+		seen[c.Project] = true
+	}
+	if !seen["alpha"] || !seen["beta"] {
+		t.Errorf("expected cards from both alpha and beta projects, got projects %v", seen)
+	}
+
+	// Scoped to one project must NOT bleed across projects.
+	scoped, err := s.ListCards(CardListParams{Project: "alpha"})
+	if err != nil {
+		t.Fatalf("ListCards(alpha): %v", err)
+	}
+	for _, c := range scoped {
+		if c.Project != "alpha" {
+			t.Errorf("project=alpha returned card from %q", c.Project)
+		}
+	}
+}
+
 func TestListCardsPrioritizedOrder(t *testing.T) {
 	s := setupTestDB(t)
 	proj := createTestProject(t, s)

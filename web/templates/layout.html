@@ -45,6 +45,7 @@
       <template x-if="viewMode === 'project'">
         <div class="nav-select-wrap">
           <select class="nav-select" x-model="currentProject" @change="loadBoard()" aria-label="Project">
+            <option value="all">All projects</option>
             <template x-for="p in projects" :key="p.id">
               <option :value="p.id" x-text="p.name"></option>
             </template>
