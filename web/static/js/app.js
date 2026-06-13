@@ -15,6 +15,10 @@ function kkullm() {
     inArchive: false,
     altHeld: false,
     blockMove: { open: false, message: '', _resolve: null },
+    // Card ids whose status THIS client just changed via drag. Used to ignore
+    // the echo card_updated SSE for our own move (the drop's fetch response
+    // reconciles the tile; reacting to the echo causes a spurious flip). (#69)
+    _pendingDrops: new Set(),
 
     // Compose modal
     composeOpen: false,
@@ -594,6 +598,11 @@ function kkullm() {
       if (unblock) qs.push('unblock=1');
       if (force) qs.push('force=1');
       const url = '/ui/cards/' + cardId + '/status' + (qs.length ? '?' + qs.join('&') : '');
+      // Suppress the self-echo card_updated SSE for this card while our own
+      // drop reconciles. Cleared after a short window that covers both SSE
+      // orderings (echo before or shortly after the fetch resolves). (#69)
+      this._pendingDrops.add(cardId);
+      setTimeout(() => this._pendingDrops.delete(cardId), 1500);
       fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -724,6 +733,11 @@ function kkullm() {
       // but onCardDrop is still awaiting the operator's choice and holds DOM
       // refs that a board reload would orphan.
       if (this.blockMove.open) return;
+      // Ignore the echo of a status change THIS client just made via drag —
+      // the drop's fetch response reconciles the tile in place. Reacting here
+      // would trigger a redundant flipCard, animating the card back to its old
+      // column and then forward again. (#69)
+      if (this._pendingDrops.has(String(card.id))) return;
 
       const cardEl = document.querySelector('[data-card-id="' + card.id + '"]');
       if (!cardEl) {
