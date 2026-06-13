@@ -25,6 +25,7 @@ type Card struct {
 	Title        string         `json:"title"`
 	Body         string         `json:"body,omitempty"`
 	Status       string         `json:"status"`
+	Blocked      bool           `json:"blocked"`
 	ProjectID    int            `json:"project_id"`
 	Project      string         `json:"project,omitempty"`
 	Assignees    []string       `json:"assignees,omitempty"`
@@ -46,6 +47,7 @@ type Comment struct {
 	AgentID   int       `json:"agent_id"`
 	Agent     string    `json:"agent,omitempty"`
 	Body      string    `json:"body"`
+	Kind      string    `json:"kind,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -66,7 +68,6 @@ var ValidStatuses = map[string]bool{
 	"in_flight":   true,
 	"completed":   true,
 	"tabled":      true,
-	"blocked":     true,
 }
 
 // AllStatuses lists every valid card status in canonical display order
@@ -74,7 +75,6 @@ var ValidStatuses = map[string]bool{
 var AllStatuses = []string{
 	"considering",
 	"todo",
-	"blocked",
 	"in_flight",
 	"completed",
 	"tabled",
@@ -82,10 +82,9 @@ var AllStatuses = []string{
 
 var ValidTransitions = map[string]map[string]bool{
 	"considering": {"todo": true, "tabled": true},
-	"todo":        {"in_flight": true, "blocked": true, "tabled": true},
-	"in_flight":   {"completed": true, "blocked": true, "tabled": true},
+	"todo":        {"in_flight": true, "tabled": true},
+	"in_flight":   {"completed": true, "tabled": true},
 	"completed":   {"in_flight": true, "tabled": true},
-	"blocked":     {"todo": true, "in_flight": true, "tabled": true},
 	"tabled":      {"considering": true, "todo": true},
 }
 
