@@ -57,9 +57,34 @@
 
     <div class="drawer-section">
       <div class="drawer-meta">
-        <div>
+        <div x-data="{ assigning: false }">
           <div class="drawer-section-label">Assignees</div>
-          <div class="drawer-meta-item">{{if .Card.Assignees}}{{joinStrings .Card.Assignees ", "}}{{else}}unassigned{{end}}</div>
+          <div x-show="!assigning" class="drawer-assignees-row">
+            <span class="drawer-meta-item">{{if .Card.Assignees}}{{joinStrings .Card.Assignees ", "}}{{else}}unassigned{{end}}</span>
+            <button type="button" class="drawer-edit-toggle" @click="assigning = true" title="Change assignees">Edit</button>
+          </div>
+          <form x-show="assigning" x-cloak class="drawer-assignee-form"
+                hx-post="/ui/cards/{{.Card.ID}}/assignees"
+                hx-target="#drawer-container"
+                hx-swap="innerHTML">
+            {{if .ProjectAgents}}
+            <div class="drawer-assignee-options">
+              {{range .ProjectAgents}}
+              <label class="drawer-assignee-option">
+                <input type="checkbox" name="assignee" value="{{.Name}}"
+                       {{if isAssigned $.Card .Name}}checked{{end}}>
+                <span>{{.Name}}</span>
+              </label>
+              {{end}}
+            </div>
+            {{else}}
+            <div class="drawer-meta-item">No agents in this project.</div>
+            {{end}}
+            <div class="drawer-edit-actions">
+              <button type="submit">Save</button>
+              <button type="button" class="link-cancel" @click="assigning = false">Cancel</button>
+            </div>
+          </form>
         </div>
         <div>
           <div class="drawer-section-label">Tags</div>

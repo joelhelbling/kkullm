@@ -44,6 +44,9 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	// Edit a card's title and body (from the drawer)
 	mux.HandleFunc("POST /ui/cards/{id}/edit", ws.handleEditCard)
 
+	// Re-assign a card: replace its assignees (from the drawer picker)
+	mux.HandleFunc("POST /ui/cards/{id}/assignees", ws.handleAssignCard)
+
 	// Delete a card (from the drawer). Gated by RequireAdmin as a
 	// chokepoint for future auth.
 	mux.Handle("POST /ui/cards/{id}/delete", RequireAdmin(http.HandlerFunc(ws.handleDeleteCard)))

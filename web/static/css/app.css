@@ -1132,6 +1132,37 @@ body::before {
   color: var(--text-primary);
 }
 
+.drawer-assignees-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawer-assignee-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drawer-assignee-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drawer-assignee-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.drawer-assignee-option input {
+  cursor: pointer;
+}
+
 .drawer-close {
   cursor: pointer;
   color: var(--text-secondary);

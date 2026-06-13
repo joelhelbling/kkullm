@@ -172,11 +172,12 @@ type statusPill struct {
 }
 
 type drawerData struct {
-	Card         *model.Card
-	Comments     []model.Comment
-	StatusPills  []statusPill
-	CommentError string
-	EditError    string
+	Card          *model.Card
+	Comments      []model.Comment
+	StatusPills   []statusPill
+	ProjectAgents []model.Agent
+	CommentError  string
+	EditError     string
 }
 
 func buildStatusPills(current string) []statusPill {
@@ -210,13 +211,20 @@ func (ws *WebServer) renderDrawerWith(w http.ResponseWriter, card *model.Card, c
 	if comments == nil {
 		comments = []model.Comment{}
 	}
+	// Agents scoped to the card's project populate the assignee picker.
+	agents, err := ws.store.ListAgents(card.Project)
+	if err != nil {
+		renderError(w, 500, "internal error", err)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "drawer", drawerData{
-		Card:         card,
-		Comments:     comments,
-		StatusPills:  buildStatusPills(card.Status),
-		CommentError: commentError,
-		EditError:    editError,
+		Card:          card,
+		Comments:      comments,
+		StatusPills:   buildStatusPills(card.Status),
+		ProjectAgents: agents,
+		CommentError:  commentError,
+		EditError:     editError,
 	}); err != nil {
 		log.Printf("render drawer: %v", err)
 	}
@@ -494,6 +502,51 @@ func (ws *WebServer) handleEditCard(w http.ResponseWriter, r *http.Request) {
 	updated, err := ws.store.UpdateCard(id, store.CardUpdateParams{
 		Title: &title,
 		Body:  &body,
+	})
+	if err != nil {
+		ws.renderDrawerWith(w, card, "", err.Error())
+		return
+	}
+
+	ws.events.Publish(api.Event{Type: "card_updated", Data: updated})
+
+	ws.renderDrawer(w, updated, "")
+}
+
+// handleAssignCard replaces a card's assignees with the set submitted by the
+// drawer's assignee picker. The picker sends a repeatable "assignee" field
+// (one per chosen agent); an empty submission clears all assignees. It reuses
+// store.UpdateCard's full-replace assignee path — the same path the API/CLI
+// --assignee flag drives — and broadcasts card_updated so the board and other
+// clients live-refresh, mirroring handleEditCard.
+func (ws *WebServer) handleAssignCard(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid id", 400)
+		return
+	}
+
+	card, err := ws.store.GetCard(id)
+	if err != nil {
+		renderError(w, 404, "card not found", err)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form data", 400)
+		return
+	}
+
+	// A non-nil slice signals UpdateCard to replace assignees; an empty
+	// (but non-nil) slice clears them. r.PostForm["assignee"] is nil only
+	// when the field is absent, so default to an empty slice.
+	assignees := r.PostForm["assignee"]
+	if assignees == nil {
+		assignees = []string{}
+	}
+
+	updated, err := ws.store.UpdateCard(id, store.CardUpdateParams{
+		Assignees: assignees,
 	})
 	if err != nil {
 		ws.renderDrawerWith(w, card, "", err.Error())
