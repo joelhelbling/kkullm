@@ -1,9 +1,11 @@
 {{define "card"}}
-<div class="card-tile{{if eq .Status "in_flight"}} in-flight{{end}}"
+<div class="card-tile{{if eq .Status "in_flight"}} in-flight{{end}}{{if .Blocked}} card-tile-blocked{{end}}"
      data-card-id="{{.ID}}"
+     {{if .Blocked}}data-blocked="true"{{end}}
      hx-get="/ui/cards/{{.ID}}/drawer"
      hx-target="#drawer-container"
      hx-swap="innerHTML">
+  {{if .Blocked}}<span class="card-blocked-badge" title="Blocked">Blocked</span>{{end}}
   {{if .ShowProject}}
   <div class="card-tile-project">
     <span class="project-badge" style="background:{{projectColor .Project}};color:white;">{{.Project}}</span>

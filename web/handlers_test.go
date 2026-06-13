@@ -8,8 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/joelhelbling/kkullm/api"
-	"github.com/joelhelbling/kkullm/db"
+	"github.com/joelhelbling/kkullm/model"
 	"github.com/joelhelbling/kkullm/store"
 )
 
@@ -416,41 +415,6 @@ func TestBoardAgentScoped(t *testing.T) {
 	// Verify ShowProject=true by checking for project-badge class
 	if !strings.Contains(body, "project-badge") {
 		t.Error("expected agent-scoped board to show project-of-origin badges")
-	}
-}
-
-func TestBlockersHandler(t *testing.T) {
-	mux, st := setupTestMuxWithStore(t)
-
-	// Create a todo card, then set the orthogonal blocked flag.
-	card, _ := st.CreateCard(store.CardCreateParams{
-		Title:     "Blocked card",
-		Status:    "todo",
-		ProjectID: 1,
-		Assignees: []string{"user"},
-	})
-
-	blockedFlag := true
-	st.UpdateCard(card.ID, store.CardUpdateParams{Blocked: &blockedFlag})
-
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	resp, err := http.Get(ts.URL + "/ui/blockers")
-	if err != nil {
-		t.Fatalf("GET /ui/blockers: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
-	}
-
-	buf, _ := io.ReadAll(resp.Body)
-	body := string(buf)
-
-	if !strings.Contains(body, "Blocked card") {
-		t.Error("expected blockers to contain blocked card")
 	}
 }
 
@@ -1026,34 +990,44 @@ func TestFullFlow(t *testing.T) {
 		t.Errorf("expected status 'todo', got %q", updated.Status)
 	}
 
-	// 6. Fetch blockers (should be empty of this card)
-	resp, err = http.Get(ts.URL + "/ui/blockers")
+	// 6. Board should not show the blocked badge yet (card is in todo).
+	resp, err = http.Get(ts.URL + "/ui/board?project=1")
 	if err != nil {
-		t.Fatalf("GET blockers: %v", err)
+		t.Fatalf("GET board: %v", err)
 	}
 	buf, _ = io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if strings.Contains(string(buf), "Flow test card") {
-		t.Error("blockers should not contain the test card (it's in todo, not blocked)")
+	if strings.Contains(string(buf), "card-blocked-badge") {
+		t.Error("board should not show a blocked badge before the card is blocked")
 	}
 
-	// 7. Set the orthogonal blocked flag. (The in-place web toggle UX is
-	// deferred to #32; here we set the flag via the store to verify the
-	// global Blocked column still sources blocked cards by flag.)
-	blockedFlag := true
-	if _, err := st.UpdateCard(card.ID, store.CardUpdateParams{Blocked: &blockedFlag}); err != nil {
-		t.Fatalf("set blocked flag: %v", err)
-	}
-
-	// 8. Fetch blockers (should contain the card now)
-	resp, err = http.Get(ts.URL + "/ui/blockers")
+	// 7. Block the card via the web endpoint.
+	resp, err = http.Post(
+		ts.URL+fmt.Sprintf("/ui/cards/%d/block", card.ID),
+		"application/x-www-form-urlencoded",
+		strings.NewReader("reason=blocked+in+flow"))
 	if err != nil {
-		t.Fatalf("GET blockers: %v", err)
+		t.Fatalf("POST block: %v", err)
+	}
+	resp.Body.Close()
+	blockedCard, _ := st.GetCard(card.ID)
+	if !blockedCard.Blocked {
+		t.Error("expected card to be blocked after POST /block")
+	}
+
+	// 8. Board should now render the card in place with the blocked badge.
+	resp, err = http.Get(ts.URL + "/ui/board?project=1")
+	if err != nil {
+		t.Fatalf("GET board: %v", err)
 	}
 	buf, _ = io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(buf), "Flow test card") {
-		t.Error("blockers should contain the blocked card")
+	body := string(buf)
+	if !strings.Contains(body, "Flow test card") {
+		t.Error("board should still contain the card in its real column")
+	}
+	if !strings.Contains(body, "card-blocked-badge") {
+		t.Error("board should show the blocked badge for the blocked card")
 	}
 }
 
@@ -1168,39 +1142,6 @@ func TestDeleteCardFromDrawer_StaleIDIsIdempotent(t *testing.T) {
 
 	if rec.Code != http.StatusSeeOther && rec.Code != http.StatusFound {
 		t.Fatalf("expected redirect for stale id, got %d (body: %s)", rec.Code, rec.Body.String())
-	}
-}
-
-func TestLoadBlockersSetsToastTriggerOnError(t *testing.T) {
-	database, err := db.Open(":memory:")
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-	if err := db.Migrate(database); err != nil {
-		t.Fatalf("Migrate: %v", err)
-	}
-	s := store.New(database)
-	srv := api.NewServer(s)
-	ws := &WebServer{store: s, events: srv.EventBus()}
-
-	// Close the underlying DB so any subsequent query fails.
-	database.Close()
-
-	rec := httptest.NewRecorder()
-	got := ws.loadBlockers(rec)
-
-	if got != nil {
-		t.Errorf("expected nil blockers on error, got %d", len(got))
-	}
-	trigger := rec.Header().Get("HX-Trigger")
-	if trigger == "" {
-		t.Fatalf("expected HX-Trigger header to be set on error")
-	}
-	if !strings.Contains(trigger, "showToast") {
-		t.Errorf("expected HX-Trigger to fire showToast event, got %q", trigger)
-	}
-	if !strings.Contains(trigger, "blockers") {
-		t.Errorf("expected toast message to mention blockers, got %q", trigger)
 	}
 }
 
@@ -1402,3 +1343,326 @@ func TestDrawerRendersMarkdownBody(t *testing.T) {
 		t.Errorf("expected raw <script> to be stripped from drawer body, but it was present in: %s", drawerBodySection)
 	}
 }
+
+// --- Issue #32: blocked badge, block/unblock controls, unblock-on-edit ---
+
+func TestCardTileBadgeWhenBlocked(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Blocked tile card",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+	if _, err := st.UpdateCard(card.ID, store.CardUpdateParams{Blocked: boolPtr32(true)}); err != nil {
+		t.Fatalf("set blocked: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/ui/board?project=1")
+	if err != nil {
+		t.Fatalf("GET board: %v", err)
+	}
+	defer resp.Body.Close()
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	if !strings.Contains(body, "card-tile-blocked") {
+		t.Errorf("expected blocked card tile to carry card-tile-blocked marker; got: %s", body)
+	}
+	if !strings.Contains(body, "card-blocked-badge") {
+		t.Errorf("expected blocked badge markup on tile; got: %s", body)
+	}
+}
+
+func TestCardTileNoBadgeWhenNotBlocked(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	_, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Unblocked tile card",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/ui/board?project=1")
+	if err != nil {
+		t.Fatalf("GET board: %v", err)
+	}
+	defer resp.Body.Close()
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	if strings.Contains(body, "card-blocked-badge") {
+		t.Errorf("did not expect blocked badge on a non-blocked board; got: %s", body)
+	}
+}
+
+func TestBlockEndpointSetsFlagAndComment(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Block me",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Post(
+		ts.URL+fmt.Sprintf("/ui/cards/%d/block", card.ID),
+		"application/x-www-form-urlencoded",
+		strings.NewReader("reason=waiting+on+deps"))
+	if err != nil {
+		t.Fatalf("POST block: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	updated, _ := st.GetCard(card.ID)
+	if !updated.Blocked {
+		t.Error("expected card to be blocked after POST /block")
+	}
+
+	comments, _ := st.ListComments(card.ID)
+	var found *model.Comment
+	for i := range comments {
+		if comments[i].Kind == "block" {
+			found = &comments[i]
+		}
+	}
+	if found == nil {
+		t.Fatalf("expected a kind=block comment, got %+v", comments)
+	}
+	if !strings.Contains(found.Body, "waiting on deps") {
+		t.Errorf("expected block comment to carry reason, got %q", found.Body)
+	}
+
+	buf, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(buf), "drawer-header") {
+		t.Error("expected block endpoint to re-render the drawer")
+	}
+}
+
+func TestUnblockEndpointClearsFlagAndComment(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Unblock me",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+	if _, err := st.UpdateCard(card.ID, store.CardUpdateParams{Blocked: boolPtr32(true)}); err != nil {
+		t.Fatalf("set blocked: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Post(
+		ts.URL+fmt.Sprintf("/ui/cards/%d/unblock", card.ID),
+		"application/x-www-form-urlencoded",
+		strings.NewReader("reason=resolved"))
+	if err != nil {
+		t.Fatalf("POST unblock: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	updated, _ := st.GetCard(card.ID)
+	if updated.Blocked {
+		t.Error("expected card to be unblocked after POST /unblock")
+	}
+
+	comments, _ := st.ListComments(card.ID)
+	var found bool
+	for _, c := range comments {
+		if c.Kind == "unblock" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a kind=unblock comment, got %+v", comments)
+	}
+}
+
+func TestStatusChangeWithUnblockSignalClearsFlag(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Blocked drag card",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+	if _, err := st.UpdateCard(card.ID, store.CardUpdateParams{Blocked: boolPtr32(true)}); err != nil {
+		t.Fatalf("set blocked: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	req, _ := http.NewRequest("PATCH",
+		ts.URL+fmt.Sprintf("/ui/cards/%d/status?unblock=1", card.ID),
+		strings.NewReader("status=in_flight"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("PATCH status: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	updated, _ := st.GetCard(card.ID)
+	if updated.Status != "in_flight" {
+		t.Errorf("expected status in_flight, got %q", updated.Status)
+	}
+	if updated.Blocked {
+		t.Error("expected card to be unblocked with ?unblock=1 signal")
+	}
+	comments, _ := st.ListComments(card.ID)
+	var found bool
+	for _, c := range comments {
+		if c.Kind == "unblock" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected an unblock comment when status change clears the flag")
+	}
+}
+
+func TestStatusChangeWithoutSignalLeavesBlocked(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Still blocked card",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+	if _, err := st.UpdateCard(card.ID, store.CardUpdateParams{Blocked: boolPtr32(true)}); err != nil {
+		t.Fatalf("set blocked: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	req, _ := http.NewRequest("PATCH",
+		ts.URL+fmt.Sprintf("/ui/cards/%d/status", card.ID),
+		strings.NewReader("status=in_flight"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("PATCH status: %v", err)
+	}
+	defer resp.Body.Close()
+
+	updated, _ := st.GetCard(card.ID)
+	if !updated.Blocked {
+		t.Error("expected card to remain blocked without unblock signal")
+	}
+}
+
+func TestAssignWithUnblockSignalClearsFlag(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Blocked assign card",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+	if _, err := st.UpdateCard(card.ID, store.CardUpdateParams{Blocked: boolPtr32(true)}); err != nil {
+		t.Fatalf("set blocked: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Post(
+		ts.URL+fmt.Sprintf("/ui/cards/%d/assignees?unblock=1", card.ID),
+		"application/x-www-form-urlencoded",
+		strings.NewReader("assignee=user"))
+	if err != nil {
+		t.Fatalf("POST assignees: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	updated, _ := st.GetCard(card.ID)
+	if updated.Blocked {
+		t.Error("expected card to be unblocked with ?unblock=1 on assign")
+	}
+}
+
+func TestDrawerShowsBlockStateAndReason(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Drawer block state",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("create card: %v", err)
+	}
+	if _, err := st.UpdateCard(card.ID, store.CardUpdateParams{Blocked: boolPtr32(true)}); err != nil {
+		t.Fatalf("set blocked: %v", err)
+	}
+	if _, err := st.CreateComment(card.ID, 1, "stuck on upstream API", "block"); err != nil {
+		t.Fatalf("create block comment: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + fmt.Sprintf("/ui/cards/%d/drawer", card.ID))
+	if err != nil {
+		t.Fatalf("GET drawer: %v", err)
+	}
+	defer resp.Body.Close()
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	if !strings.Contains(body, "stuck on upstream API") {
+		t.Error("expected drawer to surface the block reason")
+	}
+	// An unblock control should be present for a blocked card.
+	if !strings.Contains(body, "/unblock") {
+		t.Error("expected drawer to offer an unblock control for a blocked card")
+	}
+}
+
+func boolPtr32(b bool) *bool { return &b }

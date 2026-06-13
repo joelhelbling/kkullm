@@ -47,12 +47,14 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	// Re-assign a card: replace its assignees (from the drawer picker)
 	mux.HandleFunc("POST /ui/cards/{id}/assignees", ws.handleAssignCard)
 
+	// Block / unblock a card (orthogonal flag). Each posts a kinded
+	// ("block"/"unblock") comment with the optional reason.
+	mux.HandleFunc("POST /ui/cards/{id}/block", ws.handleBlock)
+	mux.HandleFunc("POST /ui/cards/{id}/unblock", ws.handleUnblock)
+
 	// Delete a card (from the drawer). Gated by RequireAdmin as a
 	// chokepoint for future auth.
 	mux.Handle("POST /ui/cards/{id}/delete", RequireAdmin(http.HandlerFunc(ws.handleDeleteCard)))
-
-	// Blockers column (all blocked cards across all projects)
-	mux.HandleFunc("GET /ui/blockers", ws.handleBlockers)
 
 	// Admin shell + sections (Projects / Agents / Danger Zone).
 	// All admin routes are gated by RequireAdmin so future auth lands

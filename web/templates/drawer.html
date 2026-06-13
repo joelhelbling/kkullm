@@ -43,8 +43,9 @@
         {{range .StatusPills}}
         {{if .Reachable}}
         <span class="status-pill"
-              hx-patch="/ui/cards/{{$.Card.ID}}/status?response=drawer"
+              hx-patch="/ui/cards/{{$.Card.ID}}/status?response=drawer{{if $.Card.Blocked}}&unblock=1{{end}}"
               hx-vals='{"status":"{{.Status}}"}'
+              {{if $.Card.Blocked}}hx-confirm="This card is blocked. Unblock it as you change the status?"{{end}}
               hx-target="#drawer-container"
               hx-swap="innerHTML">{{.Status}}</span>
         {{else}}
@@ -53,6 +54,38 @@
         {{end}}
         {{end}}
       </div>
+    </div>
+
+    <div class="drawer-section drawer-block-section" x-data="{ blocking: false }">
+      <div class="drawer-section-label">Blocked</div>
+      {{if .Card.Blocked}}
+      <div class="drawer-block-state drawer-block-state-on">
+        <span class="card-blocked-badge" title="Blocked">Blocked</span>
+        {{if .BlockReason}}<span class="drawer-block-reason">{{.BlockReason}}</span>{{end}}
+      </div>
+      <form class="drawer-unblock-form"
+            hx-post="/ui/cards/{{.Card.ID}}/unblock"
+            hx-target="#drawer-container"
+            hx-swap="innerHTML">
+        <input type="text" name="reason" placeholder="Reason for unblocking (optional)">
+        <button type="submit">Unblock</button>
+      </form>
+      {{else}}
+      <div x-show="!blocking" class="drawer-block-state">
+        <span class="drawer-meta-item">not blocked</span>
+        <button type="button" class="drawer-edit-toggle" @click="blocking = true" title="Block this card">Block</button>
+      </div>
+      <form x-show="blocking" x-cloak class="drawer-block-form"
+            hx-post="/ui/cards/{{.Card.ID}}/block"
+            hx-target="#drawer-container"
+            hx-swap="innerHTML">
+        <input type="text" name="reason" placeholder="Reason for blocking (optional)">
+        <div class="drawer-edit-actions">
+          <button type="submit">Block</button>
+          <button type="button" class="link-cancel" @click="blocking = false">Cancel</button>
+        </div>
+      </form>
+      {{end}}
     </div>
 
     <div class="drawer-section">
@@ -64,7 +97,8 @@
             <button type="button" class="drawer-edit-toggle" @click="assigning = true" title="Change assignees">Edit</button>
           </div>
           <form x-show="assigning" x-cloak class="drawer-assignee-form"
-                hx-post="/ui/cards/{{.Card.ID}}/assignees"
+                hx-post="/ui/cards/{{.Card.ID}}/assignees{{if .Card.Blocked}}?unblock=1{{end}}"
+                {{if .Card.Blocked}}hx-confirm="This card is blocked. Unblock it as you change the assignees?"{{end}}
                 hx-target="#drawer-container"
                 hx-swap="innerHTML">
             {{if .ProjectAgents}}

@@ -10,8 +10,6 @@ function kkullm() {
     agents: [],
     drawerOpen: false,
     drawerCardId: null,
-    blockersOpen: false,
-    blockerCount: 0,
     theme: 'light',
     boardLoaded: false,
     inArchive: false,
@@ -42,8 +40,6 @@ function kkullm() {
         if (e.detail.target.id === 'board-container') {
           this.boardLoaded = true;
           this.$nextTick(() => this.initSortable());
-          this.updateBlockerCount();
-          this.syncBlockedColumnVisibility();
           this.$nextTick(() => this.initBoardPager());
         }
         if (e.detail.target.id === 'drawer-container') {
@@ -52,9 +48,6 @@ function kkullm() {
           if (idEl) {
             this.drawerCardId = parseInt(idEl.dataset.cardId);
           }
-        }
-        if (e.detail.target.id === 'blocked-cards') {
-          this.updateBlockerCount();
         }
       });
 
@@ -67,7 +60,7 @@ function kkullm() {
       });
 
       // htmx fires `htmx:responseError` for any non-2xx response. Without a
-      // listener, refreshBlockers / loadBoard / drawer fetches that 500 leave
+      // listener, loadBoard / drawer fetches that 500 leave
       // stale DOM with no user-visible cue. Surface a toast so the user
       // knows something went wrong.
       document.body.addEventListener('htmx:responseError', (e) => {
@@ -209,21 +202,19 @@ function kkullm() {
     // === Navigation ===
 
     boardPagerStatuses() {
-      return ['considering', 'todo', 'blocked', 'in_flight', 'completed', 'tabled'];
+      return ['considering', 'todo', 'in_flight', 'completed', 'tabled'];
     },
 
     boardColLabel() {
       const map = {
-        considering: 'Considering', todo: 'Todo', blocked: 'Blocked',
+        considering: 'Considering', todo: 'Todo',
         in_flight: 'In Flight', completed: 'Completed', tabled: 'Tabled',
       };
       return map[this.boardCol] || '';
     },
 
     boardColCount() {
-      const col = this.boardCol === 'blocked'
-        ? document.getElementById('blocked-column')
-        : document.querySelector('.column[data-status="' + this.boardCol + '"]');
+      const col = document.querySelector('.column[data-status="' + this.boardCol + '"]');
       if (!col) return 0;
       return col.querySelectorAll('.card-tile').length;
     },
@@ -242,10 +233,7 @@ function kkullm() {
     scrollBoardToColumn(status) {
       const board = this.$refs.board;
       if (!board) return;
-      const sel = status === 'blocked'
-        ? '#blocked-column'
-        : '.column[data-status="' + status + '"]';
-      const col = board.querySelector(sel);
+      const col = board.querySelector('.column[data-status="' + status + '"]');
       if (!col) return;
       // Optimistic: update indicator immediately so chevron taps feel instant.
       // The IntersectionObserver will confirm or correct after the scroll lands.
@@ -266,21 +254,14 @@ function kkullm() {
       if (remembered) {
         landing = remembered;
       } else {
-        const counts = {
-          blocked: board.querySelectorAll('#blocked-cards .card-tile').length,
-          in_flight: board.querySelectorAll('[data-status="in_flight"] .card-tile').length,
-        };
-        if (counts.blocked > 0) landing = 'blocked';
-        else if (counts.in_flight > 0) landing = 'in_flight';
+        const inFlight = board.querySelectorAll('[data-status="in_flight"] .card-tile').length;
+        if (inFlight > 0) landing = 'in_flight';
         else landing = 'todo';
       }
       this.boardCol = landing;
 
       // Scroll without smooth on initial landing.
-      const sel = landing === 'blocked'
-        ? '#blocked-column'
-        : '.column[data-status="' + landing + '"]';
-      const col = board.querySelector(sel);
+      const col = board.querySelector('.column[data-status="' + landing + '"]');
       if (col) col.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
 
       // Observe which column is centered.
@@ -294,8 +275,7 @@ function kkullm() {
           }
         }
         if (!best) return;
-        const col = best.target;
-        const status = col.id === 'blocked-column' ? 'blocked' : col.dataset.status;
+        const status = best.target.dataset.status;
         if (status && status !== this.boardCol) {
           this.boardCol = status;
           localStorage.setItem('kkullm-board-col:' + this.boardScopeKey(), status);
@@ -521,55 +501,14 @@ function kkullm() {
       });
     },
 
-    // === Blockers ===
-
-    toggleBlockers() {
-      this.blockersOpen = !this.blockersOpen;
-      this.syncBlockedColumnVisibility();
-      if (this.blockersOpen) {
-        this.refreshBlockers();
-      }
-    },
-
-    refreshBlockers() {
-      htmx.ajax('GET', '/ui/blockers', {
-        target: '#blocked-cards',
-        swap: 'innerHTML',
-      });
-    },
-
-    syncBlockedColumnVisibility() {
-      const col = document.getElementById('blocked-column');
-      if (col) {
-        col.classList.toggle('blocked-hidden', !this.blockersOpen);
-      }
-    },
-
-    updateBlockerCount() {
-      const blockedCards = document.querySelectorAll('#blocked-cards .card-tile');
-      this.blockerCount = blockedCards.length;
-      const countEl = document.getElementById('blocked-count');
-      if (countEl) {
-        countEl.textContent = this.blockerCount;
-      }
-      if (this.blockerCount === 0) {
-        this.blockersOpen = false;
-        this.syncBlockedColumnVisibility();
-      }
-    },
-
     // === SortableJS ===
 
     initSortable() {
       const columns = document.querySelectorAll('.column-cards[data-status]');
       columns.forEach((column) => {
         if (column._sortable) column._sortable.destroy();
-        // Blocked column: cards can be pulled OUT (user resolves blocker)
-        // but nothing can be dragged IN — agents escalate to blocked via
-        // the drawer's status selector, not drag-and-drop.
-        const isBlocked = column.id === 'blocked-cards';
         column._sortable = new Sortable(column, {
-          group: { name: 'cards', pull: true, put: !isBlocked },
+          group: { name: 'cards', pull: true, put: true },
           animation: 200,
           ghostClass: 'sortable-ghost',
           chosenClass: 'sortable-chosen',
@@ -586,7 +525,21 @@ function kkullm() {
 
       if (newStatus === oldStatus) return;
 
-      fetch('/ui/cards/' + cardId + '/status', {
+      // Unblock-on-edit: dragging a blocked card to a new status prompts the
+      // operator. On confirm we clear the flag atomically with the status
+      // change (?unblock=1). On cancel we revert the drag and leave it blocked.
+      let unblock = false;
+      if (cardEl.dataset.blocked === 'true') {
+        if (window.confirm('This card is blocked. Unblock it as you move it to ' + newStatus + '?')) {
+          unblock = true;
+        } else {
+          evt.from.appendChild(cardEl);
+          return;
+        }
+      }
+
+      const url = '/ui/cards/' + cardId + '/status' + (unblock ? '?unblock=1' : '');
+      fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'status=' + encodeURIComponent(newStatus),
@@ -607,14 +560,6 @@ function kkullm() {
               htmx.process(newEl);
             }
             this.updateColumnCounts();
-            // If we dragged OUT of blocked, update blocker state
-            if (oldStatus === 'blocked') {
-              this.blockerCount = Math.max(0, this.blockerCount - 1);
-              if (this.blockerCount === 0) {
-                this.blockersOpen = false;
-                this.syncBlockedColumnVisibility();
-              }
-            }
           });
         }
       });
@@ -688,10 +633,8 @@ function kkullm() {
     },
 
     // isCardInScope returns true when an SSE card payload belongs in the
-    // currently-viewed board. Blocked cards are always in scope since the
-    // Blocked column is global.
+    // currently-viewed board.
     isCardInScope(card) {
-      if (card.status === 'blocked') return true;
       if (this.viewMode === 'project') {
         // The "All projects" view shows every project's cards.
         if (this.currentProject === 'all') return true;
@@ -728,21 +671,12 @@ function kkullm() {
       const oldColumn = cardEl.closest('.column-cards');
       const oldStatus = oldColumn ? oldColumn.dataset.status : null;
 
-      // Transitions involving the blocked column can't use FLIP
-      // because the blocked column's position changes when it opens.
-      if (card.status === 'blocked' || oldStatus === 'blocked') {
-        if (card.status === 'blocked') {
-          this.blockerCount++;
-          this.blockersOpen = true;
-        } else {
-          this.blockerCount = Math.max(0, this.blockerCount - 1);
-          if (this.blockerCount === 0) {
-            this.blockersOpen = false;
-          }
-        }
-
+      // Block-state changes alter the tile's badge markup, which a DOM move
+      // can't reproduce. Reload the board so the badge appears/clears, then
+      // refresh the drawer if it's open on this card.
+      const wasBlocked = cardEl.dataset.blocked === 'true';
+      if (wasBlocked !== !!card.blocked) {
         this.loadBoard();
-
         if (this.drawerOpen && this.drawerCardId === card.id) {
           htmx.ajax('GET', '/ui/cards/' + card.id + '/drawer', {
             target: '#drawer-container',

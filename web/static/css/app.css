@@ -12,7 +12,6 @@
 }
 
 [x-cloak] { display: none !important; }
-.column-blocked.blocked-hidden { display: none; }
 
 html { height: 100%; }
 
@@ -395,68 +394,6 @@ body::before {
   background: rgba(255, 255, 255, 0.25);
 }
 
-/* Blockers button */
-.nav-blockers {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: transparent;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  padding: 5px 11px;
-  border-radius: 999px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, transform 0.15s;
-  position: relative;
-}
-
-.nav-blockers:hover {
-  background: var(--accent);
-  color: white;
-}
-
-.nav-blockers.hide-mode {
-  border-color: var(--text-tertiary);
-  color: var(--text-secondary);
-}
-
-.nav-blockers.hide-mode:hover {
-  background: var(--text-secondary);
-  color: var(--bg-page);
-}
-
-.blocker-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 0 var(--accent);
-  animation: pulse 2.4s ease-out infinite;
-}
-
-.nav-blockers:hover .blocker-dot {
-  background: white;
-}
-
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 var(--accent-tint-2); }
-  70% { box-shadow: 0 0 0 8px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
-}
-
-.blocker-count {
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-style: italic;
-  font-size: 13px;
-  font-variation-settings: "opsz" 18;
-  letter-spacing: 0;
-}
-
 /* Archive */
 .nav-archived {
   display: inline-flex;
@@ -740,46 +677,6 @@ body::before {
   opacity: 0.4;
 }
 
-/* ===== Blocked Column ===== */
-.column-blocked {
-  background: linear-gradient(180deg, var(--status-blocked-tint), transparent 100%);
-  border-left: 2px solid var(--accent);
-  border-right: 1px dashed var(--accent-soft);
-  padding-left: 14px;
-}
-
-.column-blocked + .column::before,
-.column-blocked::before {
-  display: none;
-}
-
-.column-blocked .column-header > span:first-child {
-  color: var(--accent);
-}
-
-.column-blocked .column-header > span:first-child::before {
-  content: "⚠ ";
-  font-style: normal;
-  font-size: 12px;
-  vertical-align: middle;
-  margin-right: 2px;
-}
-
-.column-blocked-enter {
-  max-width: 0;
-  min-width: 0;
-  opacity: 0;
-  padding: 0;
-  border-width: 0;
-  overflow: hidden;
-}
-
-.column-blocked-active {
-  max-width: 300px;
-  min-width: 240px;
-  opacity: 1;
-}
-
 /* ===== Card Tiles (paper) ===== */
 .card-tile {
   position: relative;
@@ -823,15 +720,67 @@ body::before {
 [data-status="completed"] .card-tile::before { background: var(--status-completed); opacity: 0.6; }
 [data-status="done"] .card-tile::before { background: var(--status-done); opacity: 0.5; }
 [data-status="tabled"] .card-tile::before { background: var(--status-tabled); opacity: 0.4; }
-[data-status="blocked"] .card-tile::before { background: var(--status-blocked); }
 
-.column-blocked .card-tile {
-  background: var(--bg-card);
-  border-color: var(--accent-soft);
+/* ===== Blocked cards (in-place badge + marker) ===== */
+.card-tile.card-tile-blocked {
+  border-color: var(--status-blocked);
+  background: linear-gradient(180deg, var(--status-blocked-tint), transparent 70%);
 }
 
-.column-blocked .card-tile::before {
-  background: var(--accent);
+.card-tile.card-tile-blocked::before {
+  background: var(--status-blocked);
+}
+
+.card-blocked-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--status-blocked-tint);
+  color: var(--status-blocked);
+  border: 1px solid var(--status-blocked);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+}
+
+.card-blocked-badge::before {
+  content: "⚠";
+  font-size: 10px;
+}
+
+/* Drawer block/unblock controls */
+.drawer-block-section .drawer-block-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.drawer-block-section .drawer-block-reason {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.drawer-block-form,
+.drawer-unblock-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.drawer-block-form input[type="text"],
+.drawer-unblock-form input[type="text"] {
+  flex: 1 1 160px;
+  min-width: 120px;
 }
 
 .card-tile-title {
@@ -2550,9 +2499,6 @@ body::before {
 
   /* Carry-over from the previous 720px blocks */
   .board { padding-left: 16px; padding-right: 16px; }
-  /* On phone, always show the Blocked column even when empty.
-     The .blocked-hidden class is toggled by JS to hide it on desktop. */
-  .column.column-blocked.blocked-hidden { display: flex; }
   .drawer { width: 100%; }
   .compose-modal {
     inset: 0;
@@ -2971,8 +2917,8 @@ body::before {
     box-sizing: border-box;
   }
 
-  /* Cards in any vertical list (archived, blockers, considering pager) */
-  .archived-list, .blockers-list {
+  /* Cards in any vertical list (archived, considering pager) */
+  .archived-list {
     display: flex;
     flex-direction: column;
     gap: 8px;

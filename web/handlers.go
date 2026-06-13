@@ -77,14 +77,13 @@ type cardView struct {
 }
 
 type boardData struct {
-	Considering  []cardView
-	Todo         []cardView
-	InFlight     []cardView
-	Completed    []cardView
-	Tabled       []cardView
-	BlockedCards []cardView
-	ShowProject  bool
-	Project      *model.Project // set in project-scoped view; nil for agent view
+	Considering []cardView
+	Todo        []cardView
+	InFlight    []cardView
+	Completed   []cardView
+	Tabled      []cardView
+	ShowProject bool
+	Project     *model.Project // set in project-scoped view; nil for agent view
 }
 
 func groupCards(cards []model.Card, showProject bool) boardData {
@@ -179,6 +178,23 @@ type drawerData struct {
 	ProjectAgents []model.Agent
 	CommentError  string
 	EditError     string
+	// BlockReason is the body of the most recent block/unblock kinded
+	// comment, surfaced so the operator sees why a card is blocked. Empty
+	// when no such note exists.
+	BlockReason string
+}
+
+// latestBlockReason returns the body of the most recent block/unblock kinded
+// comment in the list. comments are assumed ascending by created_at (as
+// ListComments returns them), so the last matching entry wins.
+func latestBlockReason(comments []model.Comment) string {
+	reason := ""
+	for _, c := range comments {
+		if c.Kind == "block" || c.Kind == "unblock" {
+			reason = c.Body
+		}
+	}
+	return reason
 }
 
 func buildStatusPills(current string) []statusPill {
@@ -226,6 +242,7 @@ func (ws *WebServer) renderDrawerWith(w http.ResponseWriter, card *model.Card, c
 		ProjectAgents: agents,
 		CommentError:  commentError,
 		EditError:     editError,
+		BlockReason:   latestBlockReason(comments),
 	}); err != nil {
 		log.Printf("render drawer: %v", err)
 	}
@@ -247,6 +264,33 @@ func (ws *WebServer) handleDrawer(w http.ResponseWriter, r *http.Request) {
 	ws.renderDrawer(w, card, "")
 }
 
+// wantsUnblock reports whether the request carries the "also unblock" signal.
+// The unblock-on-edit confirm (status drag / re-assign on a blocked card)
+// sends ?unblock=1 so the flag clears and an unblock note posts atomically
+// with the edit.
+func wantsUnblock(r *http.Request) bool {
+	v := r.URL.Query().Get("unblock")
+	return v == "1" || v == "true"
+}
+
+// postUnblockComment clears the blocked flag (already done by the caller's
+// UpdateCard) by posting the kind="unblock" note authored by the operator, so
+// the timeline records why/when the card was unblocked. The reason defaults to
+// a generic note since the unblock-on-edit confirm doesn't collect one.
+func (ws *WebServer) postUnblockComment(cardID int, reason string) {
+	if reason == "" {
+		reason = "Unblocked while editing the card."
+	}
+	agent, err := ws.store.GetAgentByName("user")
+	if err != nil {
+		log.Printf("unblock comment: user agent missing: %v", err)
+		return
+	}
+	if _, err := ws.store.CreateComment(cardID, agent.ID, reason, "unblock"); err != nil {
+		log.Printf("unblock comment: %v", err)
+	}
+}
+
 func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
@@ -265,12 +309,21 @@ func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	card, err := ws.store.UpdateCard(id, store.CardUpdateParams{
-		Status: &newStatus,
-	})
+	params := store.CardUpdateParams{Status: &newStatus}
+	unblock := wantsUnblock(r)
+	if unblock {
+		blocked := false
+		params.Blocked = &blocked
+	}
+
+	card, err := ws.store.UpdateCard(id, params)
 	if err != nil {
 		http.Error(w, err.Error(), 422)
 		return
+	}
+
+	if unblock {
+		ws.postUnblockComment(card.ID, "")
 	}
 
 	ws.events.Publish(api.Event{Type: "card_updated", Data: card})
@@ -342,8 +395,7 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bd := groupCards(cards, showProject)
-	bd.BlockedCards = ws.loadBlockers(w) // global; nil on error with toast trigger set
-	bd.Project = project                 // nil in agent view; suppresses the intro banner
+	bd.Project = project // nil in agent view; suppresses the intro banner
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "board", bd); err != nil {
@@ -363,36 +415,12 @@ func (ws *WebServer) handleBoardAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bd := groupCards(cards, true) // showProject: tiles span projects
-	bd.BlockedCards = ws.loadBlockers(w)
-	bd.Project = nil // no single-project intro banner in the All view
+	bd.Project = nil              // no single-project intro banner in the All view
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "board", bd); err != nil {
 		log.Printf("render board: %v", err)
 	}
-}
-
-// blockerToastTrigger is the HX-Trigger payload that asks the front-end to
-// show a non-blocking error toast when the blocker query fails. The board
-// still renders so the user keeps the rest of their work in view.
-const blockerToastTrigger = `{"showToast":{"message":"Couldn't load blockers","variant":"error"}}`
-
-// loadBlockers returns the global Blocked column. On failure it logs the
-// detail, sets an HX-Trigger header for a toast, and returns nil so the
-// board renders with an empty Blocked column.
-func (ws *WebServer) loadBlockers(w http.ResponseWriter) []cardView {
-	blocked := true
-	cards, err := ws.store.ListCards(store.CardListParams{Blocked: &blocked})
-	if err != nil {
-		log.Printf("list blocked cards: %v", err)
-		w.Header().Set("HX-Trigger", blockerToastTrigger)
-		return nil
-	}
-	out := make([]cardView, 0, len(cards))
-	for _, c := range cards {
-		out = append(out, cardView{Card: c, ShowProject: true})
-	}
-	return out
 }
 
 type archivedData struct {
@@ -597,12 +625,90 @@ func (ws *WebServer) handleAssignCard(w http.ResponseWriter, r *http.Request) {
 		assignees = []string{}
 	}
 
-	updated, err := ws.store.UpdateCard(id, store.CardUpdateParams{
-		Assignees: assignees,
-	})
+	params := store.CardUpdateParams{Assignees: assignees}
+	unblock := wantsUnblock(r)
+	if unblock {
+		blocked := false
+		params.Blocked = &blocked
+	}
+
+	updated, err := ws.store.UpdateCard(id, params)
 	if err != nil {
 		ws.renderDrawerWith(w, card, "", err.Error())
 		return
+	}
+
+	if unblock {
+		ws.postUnblockComment(updated.ID, "")
+	}
+
+	ws.events.Publish(api.Event{Type: "card_updated", Data: updated})
+
+	ws.renderDrawer(w, updated, "")
+}
+
+// handleBlock sets the blocked flag and posts a kind="block" comment authored
+// by the operator (the "user" agent, as handleAddComment resolves it). An
+// optional "reason" form field becomes the comment body. The drawer is
+// re-rendered and card_updated is broadcast so the board and other clients
+// live-refresh the badge.
+func (ws *WebServer) handleBlock(w http.ResponseWriter, r *http.Request) {
+	ws.setBlocked(w, r, true)
+}
+
+// handleUnblock clears the blocked flag and posts a kind="unblock" comment,
+// mirroring handleBlock.
+func (ws *WebServer) handleUnblock(w http.ResponseWriter, r *http.Request) {
+	ws.setBlocked(w, r, false)
+}
+
+func (ws *WebServer) setBlocked(w http.ResponseWriter, r *http.Request, blocked bool) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid id", 400)
+		return
+	}
+
+	card, err := ws.store.GetCard(id)
+	if err != nil {
+		renderError(w, 404, "card not found", err)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form data", 400)
+		return
+	}
+
+	reason := strings.TrimSpace(r.FormValue("reason"))
+
+	updated, err := ws.store.UpdateCard(id, store.CardUpdateParams{Blocked: &blocked})
+	if err != nil {
+		ws.renderDrawerWith(w, card, "", err.Error())
+		return
+	}
+
+	// Author the kinded note as the operator, the same way handleAddComment
+	// resolves the acting agent. A blank reason still posts a note so the
+	// timeline records the state change.
+	kind := "unblock"
+	body := reason
+	if blocked {
+		kind = "block"
+		if body == "" {
+			body = "Blocked."
+		}
+	} else if body == "" {
+		body = "Unblocked."
+	}
+	if agent, agentErr := ws.store.GetAgentByName("user"); agentErr == nil {
+		if comment, cErr := ws.store.CreateComment(updated.ID, agent.ID, body, kind); cErr == nil {
+			ws.events.Publish(api.Event{Type: "comment_created", Data: comment})
+		} else {
+			log.Printf("create %s comment: %v", kind, cErr)
+		}
+	} else {
+		log.Printf("%s comment: user agent missing: %v", kind, agentErr)
 	}
 
 	ws.events.Publish(api.Event{Type: "card_updated", Data: updated})
@@ -630,20 +736,4 @@ func (ws *WebServer) handleDeleteCard(w http.ResponseWriter, r *http.Request) {
 
 func (ws *WebServer) broadcastCardDeleted(id int) {
 	ws.events.Publish(api.Event{Type: "card_deleted", Data: map[string]int{"id": id}})
-}
-
-func (ws *WebServer) handleBlockers(w http.ResponseWriter, r *http.Request) {
-	blocked := true
-	cards, err := ws.store.ListCards(store.CardListParams{
-		Blocked: &blocked,
-	})
-	if err != nil {
-		renderError(w, 500, "internal error", err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.ExecuteTemplate(w, "blockers", cards); err != nil {
-		log.Printf("render blockers: %v", err)
-	}
 }
