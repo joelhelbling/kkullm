@@ -98,6 +98,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *store.Store) {
 func resetCardFlags() {
 	cardUpdateBlocked = false
 	cardUpdateUnblocked = false
+	cardUpdateForce = false
 	cardUpdateReason = ""
 	cardUpdateTitle = ""
 	cardUpdateBody = ""
@@ -274,6 +275,41 @@ func TestCardUpdateRecordsActor(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("no status_changed event recorded; events=%+v", events)
+	}
+}
+
+func TestCardUpdateForceBypassesTransition(t *testing.T) {
+	ts, s := newTestServer(t)
+	proj, _ := s.CreateProject("p", "")
+	mustAgent(t, s, "alice", proj.ID)
+	card, _ := s.CreateCard(store.CardCreateParams{Title: "task", ProjectID: proj.ID, Status: "considering"})
+
+	// considering -> completed is illegal; without --force it must error.
+	if err := runRoot(t, "card", "update", itoa(card.ID),
+		"--status", "completed", "--server", ts.URL, "--as", "alice"); err == nil {
+		t.Fatal("expected error for illegal transition without --force")
+	}
+
+	// With --force it succeeds.
+	if err := runRoot(t, "card", "update", itoa(card.ID),
+		"--status", "completed", "--force", "--server", ts.URL, "--as", "alice"); err != nil {
+		t.Fatalf("card update --force: %v", err)
+	}
+
+	got, _ := s.GetCard(card.ID)
+	if got.Status != "completed" {
+		t.Errorf("status = %q, want %q", got.Status, "completed")
+	}
+
+	events, _ := s.ListCardEvents(card.ID)
+	var forced bool
+	for _, e := range events {
+		if e.EventType == "status_changed" {
+			forced = e.Forced
+		}
+	}
+	if !forced {
+		t.Errorf("expected forced status_changed event")
 	}
 }
 
