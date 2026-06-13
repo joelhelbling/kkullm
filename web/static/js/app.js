@@ -600,9 +600,10 @@ function kkullm() {
         // choice === 'keep' → proceed with the move, leave blocked flag set
       }
 
-      // altHeld is tracked via document keydown/keyup + snapshotted at drag
-      // start (onStart), because evt.originalEvent.altKey is unreliable at drop
-      // time in Chrome/Safari (it works in Firefox). See #62.
+      // altHeld is refreshed from the live dragover event (onMove) right up to
+      // the drop, plus document keydown/keyup and an onStart snapshot as
+      // fallbacks. We avoid reading evt.originalEvent.altKey here at drop time
+      // because it is unreliable in Chrome/Safari. See #62, #71.
       const force = this.altHeld;
 
       const qs = [];
