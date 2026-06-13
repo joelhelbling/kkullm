@@ -147,9 +147,6 @@ type CardUpdateRequest struct {
 	Assignees []string             `json:"assignees,omitempty"`
 	Tags      []string             `json:"tags,omitempty"`
 	Relations []model.CardRelation `json:"relations,omitempty"`
-	// Force bypasses the status-transition matrix (#35). Status validity is
-	// still enforced server-side; only the transition rule is skipped.
-	Force bool `json:"force,omitempty"`
 }
 
 type CardListOptions struct {

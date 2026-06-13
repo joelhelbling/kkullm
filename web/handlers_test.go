@@ -300,53 +300,6 @@ func TestStatusChangeReturnsDrawerOnResponseDrawer(t *testing.T) {
 	}
 }
 
-func TestStatusChangeForce(t *testing.T) {
-	mux, st := setupTestMuxWithStore(t)
-
-	card, err := st.CreateCard(store.CardCreateParams{
-		Title:     "Force drop test",
-		Status:    "considering",
-		ProjectID: 1,
-	})
-	if err != nil {
-		t.Fatalf("create card: %v", err)
-	}
-
-	ts := httptest.NewServer(mux)
-	defer ts.Close()
-
-	// considering -> completed is illegal. ?force=1 (Alt-drop) bypasses it.
-	req, _ := http.NewRequest("PATCH",
-		ts.URL+fmt.Sprintf("/ui/cards/%d/status?force=1", card.ID),
-		strings.NewReader("status=completed"))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatalf("PATCH status?force=1: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		t.Fatalf("expected 200 with force, got %d", resp.StatusCode)
-	}
-
-	updated, _ := st.GetCard(card.ID)
-	if updated.Status != "completed" {
-		t.Errorf("status = %q, want %q", updated.Status, "completed")
-	}
-
-	events, _ := st.ListCardEvents(card.ID)
-	var forced bool
-	for _, e := range events {
-		if e.EventType == "status_changed" {
-			forced = e.Forced
-		}
-	}
-	if !forced {
-		t.Errorf("expected forced status_changed event")
-	}
-}
-
 func TestStatusChangeAllowsAnyTransition(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 

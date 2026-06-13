@@ -219,7 +219,7 @@ func TestMigrate_CreatesCardEventsTable(t *testing.T) {
 		cols[name] = struct{}{}
 	}
 
-	for _, want := range []string{"id", "card_id", "actor", "event_type", "from_value", "to_value", "forced", "created_at"} {
+	for _, want := range []string{"id", "card_id", "actor", "event_type", "from_value", "to_value", "created_at"} {
 		if _, ok := cols[want]; !ok {
 			t.Errorf("expected card_events.%s column after migrate", want)
 		}

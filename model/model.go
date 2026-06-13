@@ -63,7 +63,6 @@ type CardEvent struct {
 	EventType string    `json:"event_type"`
 	FromValue string    `json:"from_value,omitempty"`
 	ToValue   string    `json:"to_value,omitempty"`
-	Forced    bool      `json:"forced"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

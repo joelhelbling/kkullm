@@ -30,9 +30,6 @@ func TestAppendAndListCardEvents(t *testing.T) {
 	if statusEv.CreatedAt.IsZero() {
 		t.Error("expected populated created_at")
 	}
-	if statusEv.Forced {
-		t.Error("forced should default false")
-	}
 
 	if _, err := s.AppendCardEvent(model.CardEvent{
 		CardID:    card.ID,
@@ -97,9 +94,6 @@ func TestUpdateCardEmitsStatusEvent(t *testing.T) {
 	}
 	if e.Actor != "mover" {
 		t.Errorf("actor = %q, want mover", e.Actor)
-	}
-	if e.Forced {
-		t.Error("forced should be false")
 	}
 }
 

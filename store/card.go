@@ -53,12 +53,6 @@ type CardUpdateParams struct {
 	Tags      []string
 	Relations []model.CardRelation
 
-	// Force bypasses the status-transition matrix when the status is changing.
-	// Status validity (model.ValidStatuses) is still enforced; only the
-	// transition rule is skipped. A forced move is recorded as Forced in the
-	// audit trail. Available to anyone (#35).
-	Force bool
-
 	// Actor is the acting-agent identity recorded into the audit trail.
 	// Defaults to "" until the CLI/API thread --as/KKULLM_AGENT through (#37).
 	Actor string
@@ -569,7 +563,6 @@ func (s *Store) UpdateCard(id int, p CardUpdateParams) (*model.Card, error) {
 			EventType: "status_changed",
 			FromValue: oldStatus,
 			ToValue:   *p.Status,
-			Forced:    p.Force,
 		}); err != nil {
 			return nil, err
 		}

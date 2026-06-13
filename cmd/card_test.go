@@ -98,7 +98,6 @@ func newTestServer(t *testing.T) (*httptest.Server, *store.Store) {
 func resetCardFlags() {
 	cardUpdateBlocked = false
 	cardUpdateUnblocked = false
-	cardUpdateForce = false
 	cardUpdateReason = ""
 	cardUpdateTitle = ""
 	cardUpdateBody = ""
