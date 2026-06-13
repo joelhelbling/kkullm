@@ -697,6 +697,10 @@ function kkullm() {
     handleCardCreated(card) {
       // Don't reload mid-drag — SortableJS state would be clobbered.
       if (window.Sortable && Sortable.active) return;
+      // Don't reload while the blocked-move modal is open — the drag has ended
+      // but onCardDrop is still awaiting the operator's choice and holds DOM
+      // refs that a board reload would orphan.
+      if (this.blockMove.open) return;
       // Skip events for cards outside the current scope (other project or
       // unassigned to current agent). Blocked cards always pass the filter.
       if (!this.isCardInScope(card)) return;
@@ -707,6 +711,10 @@ function kkullm() {
       // Skip mid-drag SSE-driven DOM mutations — the in-flight drag will
       // PATCH on drop and reconcile via the response.
       if (window.Sortable && Sortable.active) return;
+      // Don't reload while the blocked-move modal is open — the drag has ended
+      // but onCardDrop is still awaiting the operator's choice and holds DOM
+      // refs that a board reload would orphan.
+      if (this.blockMove.open) return;
 
       const cardEl = document.querySelector('[data-card-id="' + card.id + '"]');
       if (!cardEl) {

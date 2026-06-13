@@ -131,10 +131,11 @@
 
   <!-- Blocked-move decision modal (#60) -->
   <div class="modal blockmove-modal" x-show="blockMove.open" x-cloak
+       role="dialog" aria-modal="true" aria-labelledby="blockmove-title"
        @click.self="resolveBlockMove(null)"
        @keydown.escape.window="blockMove.open && resolveBlockMove(null)">
     <div class="modal-content">
-      <h2 class="blockmove-title">Move a blocked card</h2>
+      <h2 id="blockmove-title" class="blockmove-title">Move a blocked card</h2>
       <p class="blockmove-message" x-text="blockMove.message"></p>
       <div class="modal-actions blockmove-actions">
         <button type="button" class="btn-ghost" @click="resolveBlockMove(null)">Cancel</button>
