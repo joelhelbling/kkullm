@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joelhelbling/kkullm/model"
 	"github.com/joelhelbling/kkullm/web/markdown"
 )
 
@@ -17,6 +18,7 @@ var funcMap = template.FuncMap{
 	"tagBg":        tagBg,
 	"tagColor":     tagColor,
 	"joinStrings":  joinStrings,
+	"isAssigned":   isAssigned,
 	"timeAgo":      timeAgo,
 	"renderBody":   markdown.RenderBody,
 	"renderTitle":  markdown.RenderTitle,
@@ -74,6 +76,17 @@ func tagColor(tag string) string {
 
 func joinStrings(strs []string, sep string) string {
 	return strings.Join(strs, sep)
+}
+
+// isAssigned reports whether the given agent name is among the card's current
+// assignees, so the drawer picker can pre-check the right boxes.
+func isAssigned(card *model.Card, name string) bool {
+	for _, a := range card.Assignees {
+		if a == name {
+			return true
+		}
+	}
+	return false
 }
 
 func timeAgo(t time.Time) string {

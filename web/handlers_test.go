@@ -625,6 +625,215 @@ func TestEditCardHappyPath(t *testing.T) {
 	}
 }
 
+func TestAssignCardAddsAssignee(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	// A second agent in the same (orchestration) project, alongside the
+	// seeded "user" agent.
+	if _, err := st.CreateAgent("scout", 1, "Recon agent"); err != nil {
+		t.Fatalf("CreateAgent: %v", err)
+	}
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Assign me",
+		Status:    "todo",
+		ProjectID: 1,
+		Assignees: []string{"user"},
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// Set assignees to {user, scout} — add "scout".
+	form := strings.NewReader("assignee=user&assignee=scout")
+	req, _ := http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%s/ui/cards/%d/assignees", ts.URL, card.ID), form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	body := string(bodyBytes)
+
+	if !strings.Contains(body, "drawer-header") {
+		t.Errorf("expected drawer fragment in response, got: %s", body)
+	}
+	if !strings.Contains(body, "scout") {
+		t.Errorf("expected re-rendered drawer to show new assignee 'scout', got: %s", body)
+	}
+
+	updated, err := st.GetCard(card.ID)
+	if err != nil {
+		t.Fatalf("GetCard: %v", err)
+	}
+	want := map[string]bool{"user": true, "scout": true}
+	if len(updated.Assignees) != 2 {
+		t.Fatalf("expected 2 assignees, got %v", updated.Assignees)
+	}
+	for _, a := range updated.Assignees {
+		if !want[a] {
+			t.Errorf("unexpected assignee %q in %v", a, updated.Assignees)
+		}
+	}
+}
+
+func TestAssignCardRemovesAssignee(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	if _, err := st.CreateAgent("scout", 1, "Recon agent"); err != nil {
+		t.Fatalf("CreateAgent: %v", err)
+	}
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Unassign me",
+		Status:    "todo",
+		ProjectID: 1,
+		Assignees: []string{"user", "scout"},
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// Set assignees to {user} only — remove "scout".
+	form := strings.NewReader("assignee=user")
+	req, _ := http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%s/ui/cards/%d/assignees", ts.URL, card.ID), form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	updated, err := st.GetCard(card.ID)
+	if err != nil {
+		t.Fatalf("GetCard: %v", err)
+	}
+	if len(updated.Assignees) != 1 || updated.Assignees[0] != "user" {
+		t.Fatalf("expected assignees [user], got %v", updated.Assignees)
+	}
+}
+
+func TestAssignCardClearsAllAssignees(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Clear me",
+		Status:    "todo",
+		ProjectID: 1,
+		Assignees: []string{"user"},
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// Empty submission (form present, no assignee values) clears all.
+	form := strings.NewReader("")
+	req, _ := http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%s/ui/cards/%d/assignees", ts.URL, card.ID), form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	updated, err := st.GetCard(card.ID)
+	if err != nil {
+		t.Fatalf("GetCard: %v", err)
+	}
+	if len(updated.Assignees) != 0 {
+		t.Fatalf("expected no assignees after clear, got %v", updated.Assignees)
+	}
+}
+
+func TestAssignCardBadID(t *testing.T) {
+	mux := setupTestMux(t)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	form := strings.NewReader("assignee=user")
+	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/ui/cards/99999/assignees", form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 404 {
+		t.Errorf("expected 404 for missing card, got %d", resp.StatusCode)
+	}
+}
+
+func TestDrawerShowsAssigneePicker(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	if _, err := st.CreateAgent("scout", 1, "Recon agent"); err != nil {
+		t.Fatalf("CreateAgent: %v", err)
+	}
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Pick assignees",
+		Status:    "todo",
+		ProjectID: 1,
+		Assignees: []string{"user"},
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + fmt.Sprintf("/ui/cards/%d/drawer", card.ID))
+	if err != nil {
+		t.Fatalf("GET drawer: %v", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	body := string(bodyBytes)
+
+	// The picker posts to the assignees endpoint and offers every project agent.
+	if !strings.Contains(body, fmt.Sprintf("/ui/cards/%d/assignees", card.ID)) {
+		t.Errorf("expected drawer to contain assignee form posting to /assignees, got: %s", body)
+	}
+	if !strings.Contains(body, `value="scout"`) {
+		t.Errorf("expected drawer picker to offer project agent 'scout', got: %s", body)
+	}
+	if !strings.Contains(body, `value="user"`) {
+		t.Errorf("expected drawer picker to offer project agent 'user', got: %s", body)
+	}
+}
+
 func TestEditCardRejectsEmptyTitle(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
