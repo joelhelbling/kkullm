@@ -1,6 +1,7 @@
 package web
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -55,6 +56,32 @@ func TestStaticFileServing(t *testing.T) {
 	ct := resp.Header.Get("Content-Type")
 	if !strings.Contains(ct, "text/css") {
 		t.Errorf("expected Content-Type containing 'text/css', got %q", ct)
+	}
+}
+
+func TestFaviconServing(t *testing.T) {
+	mux := setupTestMux(t)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/static/favicon.svg")
+	if err != nil {
+		t.Fatalf("GET /static/favicon.svg: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+
+	ct := resp.Header.Get("Content-Type")
+	if !strings.Contains(ct, "image/svg+xml") && !strings.Contains(string(body), "<svg") {
+		t.Errorf("expected SVG content-type or <svg body, got Content-Type=%q body=%q", ct, string(body))
 	}
 }
 
