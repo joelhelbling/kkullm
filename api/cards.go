@@ -9,6 +9,13 @@ import (
 	"github.com/joelhelbling/kkullm/store"
 )
 
+// actorFromRequest extracts the acting-agent identity that the client sends on
+// every request (the CLI's --as / KKULLM_AGENT). It is recorded as the Actor on
+// mutations so changes are attributable in the card audit trail.
+func actorFromRequest(r *http.Request) string {
+	return r.Header.Get("X-Kkullm-Agent")
+}
+
 func (s *Server) listCards(w http.ResponseWriter, r *http.Request) {
 	params := store.CardListParams{
 		Project:     r.URL.Query().Get("project"),
@@ -74,6 +81,7 @@ func (s *Server) createCard(w http.ResponseWriter, r *http.Request) {
 		Assignees: body.Assignees,
 		Tags:      body.Tags,
 		Relations: body.Relations,
+		Actor:     actorFromRequest(r),
 	})
 	if err != nil {
 		writeError(w, 500, err.Error())
@@ -128,6 +136,7 @@ func (s *Server) updateCard(w http.ResponseWriter, r *http.Request) {
 		Assignees: body.Assignees,
 		Tags:      body.Tags,
 		Relations: body.Relations,
+		Actor:     actorFromRequest(r),
 	})
 	if err != nil {
 		writeError(w, 422, err.Error())

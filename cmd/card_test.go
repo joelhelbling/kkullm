@@ -246,6 +246,70 @@ func TestCardEventsCommand(t *testing.T) {
 	}
 }
 
+// TestCardUpdateRecordsActor verifies the acting agent (--as) is threaded from
+// the CLI through the client header and API into the recorded audit event.
+func TestCardUpdateRecordsActor(t *testing.T) {
+	ts, s := newTestServer(t)
+	proj, _ := s.CreateProject("p", "")
+	mustAgent(t, s, "alice", proj.ID)
+	card, _ := s.CreateCard(store.CardCreateParams{Title: "task", ProjectID: proj.ID, Status: "considering"})
+
+	if err := runRoot(t, "card", "update", itoa(card.ID),
+		"--status", "todo", "--server", ts.URL, "--as", "alice"); err != nil {
+		t.Fatalf("card update: %v", err)
+	}
+
+	events, err := s.ListCardEvents(card.ID)
+	if err != nil {
+		t.Fatalf("ListCardEvents: %v", err)
+	}
+	var found bool
+	for _, e := range events {
+		if e.EventType == "status_changed" {
+			found = true
+			if e.Actor != "alice" {
+				t.Errorf("status_changed actor = %q, want %q", e.Actor, "alice")
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("no status_changed event recorded; events=%+v", events)
+	}
+}
+
+// TestCardUpdateAsOverridesEnv verifies --as wins over KKULLM_AGENT, and that
+// the resolved value is what gets recorded as the audit actor.
+func TestCardUpdateAsOverridesEnv(t *testing.T) {
+	ts, s := newTestServer(t)
+	proj, _ := s.CreateProject("p", "")
+	mustAgent(t, s, "bob", proj.ID)
+	card, _ := s.CreateCard(store.CardCreateParams{Title: "task", ProjectID: proj.ID, Status: "considering"})
+
+	t.Setenv("KKULLM_AGENT", "envagent")
+	// Re-evaluate the flag default from the env, mirroring a fresh process.
+	rootCmd.PersistentFlags().Lookup("as").DefValue = "envagent"
+	agentName = "envagent"
+
+	if err := runRoot(t, "card", "update", itoa(card.ID),
+		"--status", "todo", "--server", ts.URL, "--as", "bob"); err != nil {
+		t.Fatalf("card update: %v", err)
+	}
+
+	events, err := s.ListCardEvents(card.ID)
+	if err != nil {
+		t.Fatalf("ListCardEvents: %v", err)
+	}
+	for _, e := range events {
+		if e.EventType == "status_changed" {
+			if e.Actor != "bob" {
+				t.Errorf("status_changed actor = %q, want %q (--as must override KKULLM_AGENT)", e.Actor, "bob")
+			}
+			return
+		}
+	}
+	t.Fatalf("no status_changed event recorded; events=%+v", events)
+}
+
 func strPtrCmd(s string) *string { return &s }
 
 // --- helpers ---
