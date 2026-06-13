@@ -289,7 +289,19 @@ func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+// allProjectsSelector is the sentinel ?project= value that selects the
+// cross-project "All" board view.
+const allProjectsSelector = "all"
+
 func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
+	// The "All projects" aggregation is an operator/admin view; route it
+	// through the RequireAdmin chokepoint so future auth lands in one place,
+	// consistent with the other admin-gated routes.
+	if r.URL.Query().Get("project") == allProjectsSelector {
+		RequireAdmin(http.HandlerFunc(ws.handleBoardAll)).ServeHTTP(w, r)
+		return
+	}
+
 	var cards []model.Card
 	var showProject bool
 	var project *model.Project
@@ -331,6 +343,27 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 	bd := groupCards(cards, showProject)
 	bd.BlockedCards = ws.loadBlockers(w) // global; nil on error with toast trigger set
 	bd.Project = project                 // nil in agent view; suppresses the intro banner
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.ExecuteTemplate(w, "board", bd); err != nil {
+		log.Printf("render board: %v", err)
+	}
+}
+
+// handleBoardAll renders the cross-project "All" board: every card from every
+// project. Reached via ?project=all and gated by RequireAdmin (see handleBoard).
+// Cards span projects here, so each tile shows its project label.
+func (ws *WebServer) handleBoardAll(w http.ResponseWriter, r *http.Request) {
+	// Empty Project filter lists cards across all projects.
+	cards, err := ws.store.ListCards(store.CardListParams{ArchiveLimit: webArchiveLimit})
+	if err != nil {
+		renderError(w, 500, "internal error", err)
+		return
+	}
+
+	bd := groupCards(cards, true) // showProject: tiles span projects
+	bd.BlockedCards = ws.loadBlockers(w)
+	bd.Project = nil // no single-project intro banner in the All view
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "board", bd); err != nil {
@@ -391,6 +424,16 @@ func (ws *WebServer) handleArchived(w http.ResponseWriter, r *http.Request) {
 		scope = "agent: " + agent.Name
 		boardURL = "/ui/board?agent=" + strconv.Itoa(id)
 		showProject = true
+	} else if r.URL.Query().Get("project") == allProjectsSelector {
+		// Cross-project archived view (operator/admin); empty Project filter
+		// aggregates across every project. Gated by RequireAdmin below.
+		RequireAdmin(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ws.renderArchived(w, store.CardListParams{
+				ArchiveLimit: webArchiveLimit,
+				ArchiveView:  "archived",
+			}, "all projects", "/ui/board?project=all", true)
+		})).ServeHTTP(w, r)
+		return
 	} else {
 		id, ok := ws.resolveProjectID(w, r.URL.Query().Get("project"))
 		if !ok {
@@ -406,6 +449,13 @@ func (ws *WebServer) handleArchived(w http.ResponseWriter, r *http.Request) {
 		boardURL = "/ui/board?project=" + strconv.Itoa(id)
 	}
 
+	ws.renderArchived(w, params, scope, boardURL, showProject)
+}
+
+// renderArchived runs the archived-cards query for the given scope and writes
+// the archived template. Shared by the per-project/agent path and the
+// cross-project "All" path.
+func (ws *WebServer) renderArchived(w http.ResponseWriter, params store.CardListParams, scope, boardURL string, showProject bool) {
 	cards, err := ws.store.ListCards(params)
 	if err != nil {
 		renderError(w, 500, "internal error", err)

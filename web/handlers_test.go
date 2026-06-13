@@ -89,6 +89,67 @@ func TestBoardProjectScoped(t *testing.T) {
 	}
 }
 
+func TestBoardAllProjects(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	// Seed card lives in the seeded "orchestration" project (id 1).
+	if _, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Orchestration card",
+		Status:    "todo",
+		ProjectID: 1,
+	}); err != nil {
+		t.Fatalf("create card in project 1: %v", err)
+	}
+
+	other, err := st.CreateProject("other-project", "")
+	if err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+	if _, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Other project card",
+		Status:    "todo",
+		ProjectID: other.ID,
+	}); err != nil {
+		t.Fatalf("create card in other project: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	// All view: both projects' cards appear.
+	resp, err := http.Get(ts.URL + "/ui/board?project=all")
+	if err != nil {
+		t.Fatalf("GET /ui/board?project=all: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+	if !strings.Contains(body, "Orchestration card") {
+		t.Error("expected All view to contain card from project 1")
+	}
+	if !strings.Contains(body, "Other project card") {
+		t.Error("expected All view to contain card from other project")
+	}
+
+	// Specific project remains scoped: only that project's card.
+	resp2, err := http.Get(ts.URL + fmt.Sprintf("/ui/board?project=%d", other.ID))
+	if err != nil {
+		t.Fatalf("GET /ui/board?project=%d: %v", other.ID, err)
+	}
+	defer resp2.Body.Close()
+	buf2, _ := io.ReadAll(resp2.Body)
+	body2 := string(buf2)
+	if !strings.Contains(body2, "Other project card") {
+		t.Error("expected scoped view to contain its own card")
+	}
+	if strings.Contains(body2, "Orchestration card") {
+		t.Error("scoped view leaked a card from another project")
+	}
+}
+
 func TestDrawerHandler(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
