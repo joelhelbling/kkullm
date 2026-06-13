@@ -3,17 +3,22 @@ package cmd
 import "testing"
 
 func TestValidateStatus(t *testing.T) {
-	for _, s := range []string{"considering", "todo", "blocked", "in_flight", "completed", "tabled"} {
+	for _, s := range []string{"considering", "todo", "in_flight", "completed", "tabled"} {
 		if err := validateStatus(s); err != nil {
 			t.Errorf("validateStatus(%q) = %v, want nil", s, err)
 		}
+	}
+
+	// blocked is no longer a status; it must be rejected.
+	if err := validateStatus("blocked"); err == nil {
+		t.Error("validateStatus(\"blocked\") = nil, want error (blocked is a flag now)")
 	}
 
 	err := validateStatus("bogus")
 	if err == nil {
 		t.Fatal("validateStatus(\"bogus\") = nil, want error")
 	}
-	for _, want := range []string{"bogus", "considering", "todo", "blocked", "in_flight", "completed", "tabled"} {
+	for _, want := range []string{"bogus", "considering", "todo", "in_flight", "completed", "tabled"} {
 		if !contains(err.Error(), want) {
 			t.Errorf("validateStatus error %q missing %q", err.Error(), want)
 		}

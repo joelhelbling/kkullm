@@ -308,7 +308,6 @@ func TestListCardsPrioritizedOrder(t *testing.T) {
 			"considering": nil,
 			"todo":        {"todo"},
 			"in_flight":   {"todo", "in_flight"},
-			"blocked":     {"todo", "blocked"},
 			"completed":   {"todo", "in_flight", "completed"},
 			"tabled":      {"tabled"},
 		}[target]
@@ -320,12 +319,12 @@ func TestListCardsPrioritizedOrder(t *testing.T) {
 	}
 
 	// One card per status. Order of creation is intentionally not the
-	// expected output order.
+	// expected output order. blocked is now a flag, not a status, so it no
+	// longer participates in the prioritized status ordering.
 	mk("c-considering", "considering")
 	mk("c-tabled", "tabled")
 	mk("c-completed", "completed")
 	mk("c-todo", "todo")
-	mk("c-blocked", "blocked")
 	mk("c-in_flight", "in_flight")
 
 	cards, err := s.ListCards(CardListParams{Project: proj.Name})
@@ -335,11 +334,10 @@ func TestListCardsPrioritizedOrder(t *testing.T) {
 
 	wantOrder := []string{
 		"in_flight",   // 1
-		"blocked",     // 2
-		"todo",        // 3
-		"considering", // 4
-		"completed",   // 5
-		"tabled",      // 6
+		"todo",        // 2
+		"considering", // 3
+		"completed",   // 4
+		"tabled",      // 5
 	}
 	if len(cards) != len(wantOrder) {
 		t.Fatalf("got %d cards, want %d", len(cards), len(wantOrder))
