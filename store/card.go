@@ -381,6 +381,55 @@ func (s *Store) ListCards(params CardListParams) ([]model.Card, error) {
 	return cards, nil
 }
 
+// ListFormerlyAssignedBlockedCards returns cards that are still blocked, are
+// NOT currently assigned to agentName, but were previously assigned to that
+// agent and reassigned away (an "assignee_removed" audit event names them in
+// from_value). These surface in the agent's view so a blocked card taken from
+// them while in flight doesn't get lost. Ordered by updated_at desc.
+func (s *Store) ListFormerlyAssignedBlockedCards(agentName string) ([]model.Card, error) {
+	rows, err := s.db.Query(`
+		SELECT DISTINCT c.id
+		FROM cards c
+		JOIN card_events e
+			ON e.card_id = c.id
+			AND e.event_type = 'assignee_removed'
+			AND e.from_value = ?
+		WHERE c.blocked = 1
+		  AND NOT EXISTS (
+		      SELECT 1 FROM card_assignees ca
+		      JOIN agents a ON a.id = ca.agent_id
+		      WHERE ca.card_id = c.id AND a.name = ?
+		  )
+		ORDER BY c.updated_at DESC, c.id DESC
+	`, agentName, agentName)
+	if err != nil {
+		return nil, fmt.Errorf("list formerly-assigned blocked cards: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan card id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	cards := make([]model.Card, 0, len(ids))
+	for _, id := range ids {
+		c, err := s.GetCard(id)
+		if err != nil {
+			return nil, err
+		}
+		cards = append(cards, *c)
+	}
+	return cards, nil
+}
+
 func (s *Store) UpdateCard(id int, p CardUpdateParams) (*model.Card, error) {
 	// Validate status transition if status is changing. oldStatus is captured
 	// for the audit trail (a status_changed event records from->to).

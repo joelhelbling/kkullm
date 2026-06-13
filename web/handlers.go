@@ -80,6 +80,10 @@ type layoutData struct {
 type cardView struct {
 	model.Card
 	ShowProject bool
+	// FormerlyAssigned marks a blocked card that is no longer assigned to the
+	// agent whose view this is, but was previously (an assignee_removed event
+	// names them). Surfaced in the agent view so they don't lose track of it.
+	FormerlyAssigned bool
 }
 
 type boardData struct {
@@ -111,6 +115,40 @@ func groupCards(cards []model.Card, showProject bool) boardData {
 		// blocked is an orthogonal flag now, so a blocked card stays in its
 		// real status column above. The global Blocked column is sourced
 		// separately by flag (see loadBlockers).
+	}
+	return bd
+}
+
+// addFormerlyAssigned merges formerly-assigned blocked cards into an existing
+// board grouping, placing each into its real status column and tagging it so
+// the template can show a "formerly assigned" marker. Cards already present
+// (by id) are skipped — by definition they shouldn't overlap with the agent's
+// current assignments, but we dedupe to be safe.
+func addFormerlyAssigned(bd boardData, cards []model.Card) boardData {
+	seen := make(map[int]bool)
+	for _, col := range [][]cardView{bd.Considering, bd.Todo, bd.InFlight, bd.Completed, bd.Tabled} {
+		for _, cv := range col {
+			seen[cv.ID] = true
+		}
+	}
+	for _, c := range cards {
+		if seen[c.ID] {
+			continue
+		}
+		seen[c.ID] = true
+		cv := cardView{Card: c, ShowProject: bd.ShowProject, FormerlyAssigned: true}
+		switch c.Status {
+		case "considering":
+			bd.Considering = append(bd.Considering, cv)
+		case "todo":
+			bd.Todo = append(bd.Todo, cv)
+		case "in_flight":
+			bd.InFlight = append(bd.InFlight, cv)
+		case "completed":
+			bd.Completed = append(bd.Completed, cv)
+		case "tabled":
+			bd.Tabled = append(bd.Tabled, cv)
+		}
 	}
 	return bd
 }
@@ -378,6 +416,7 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var cards []model.Card
+	var formerlyAssigned []model.Card
 	var showProject bool
 	var project *model.Project
 	var err error
@@ -395,6 +434,11 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 		}
 		cards, err = ws.store.ListCards(store.CardListParams{Assignee: agent.Name, ArchiveLimit: webArchiveLimit})
 		showProject = true
+		if err == nil {
+			// Also surface blocked cards reassigned away from this agent, so
+			// they don't lose track of work taken from them mid-flight.
+			formerlyAssigned, err = ws.store.ListFormerlyAssignedBlockedCards(agent.Name)
+		}
 	} else {
 		id, ok := ws.resolveProjectID(w, r.URL.Query().Get("project"))
 		if !ok {
@@ -417,6 +461,9 @@ func (ws *WebServer) handleBoard(w http.ResponseWriter, r *http.Request) {
 
 	bd := groupCards(cards, showProject)
 	bd.Project = project // nil in agent view; suppresses the intro banner
+	if len(formerlyAssigned) > 0 {
+		bd = addFormerlyAssigned(bd, formerlyAssigned)
+	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, "board", bd); err != nil {

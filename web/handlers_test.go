@@ -418,6 +418,69 @@ func TestBoardAgentScoped(t *testing.T) {
 	}
 }
 
+func TestBoardAgentScopedIncludesFormerlyAssignedBlocked(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	alice, err := st.GetAgent(1)
+	if err != nil {
+		t.Fatalf("get seeded agent: %v", err)
+	}
+	if _, err := st.CreateAgent("bob", 1, ""); err != nil {
+		t.Fatalf("create bob: %v", err)
+	}
+
+	// Current card: blocked & still assigned to alice.
+	current, err := st.CreateCard(store.CardCreateParams{
+		Title: "Current alice card", Status: "in_flight", ProjectID: 1,
+		Assignees: []string{alice.Name},
+	})
+	if err != nil {
+		t.Fatalf("create current: %v", err)
+	}
+	bTrue := true
+	if _, err := st.UpdateCard(current.ID, store.CardUpdateParams{Blocked: &bTrue}); err != nil {
+		t.Fatalf("block current: %v", err)
+	}
+
+	// Formerly-assigned card: blocked, assigned to alice then reassigned to bob.
+	former, err := st.CreateCard(store.CardCreateParams{
+		Title: "Formerly alice card", Status: "in_flight", ProjectID: 1,
+		Assignees: []string{alice.Name},
+	})
+	if err != nil {
+		t.Fatalf("create former: %v", err)
+	}
+	if _, err := st.UpdateCard(former.ID, store.CardUpdateParams{
+		Blocked: &bTrue, Assignees: []string{"bob"},
+	}); err != nil {
+		t.Fatalf("reassign former: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + fmt.Sprintf("/ui/board?agent=%d", alice.ID))
+	if err != nil {
+		t.Fatalf("GET /ui/board?agent: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	buf, _ := io.ReadAll(resp.Body)
+	body := string(buf)
+
+	if !strings.Contains(body, "Current alice card") {
+		t.Error("expected board to contain alice's current card")
+	}
+	if !strings.Contains(body, "Formerly alice card") {
+		t.Error("expected board to contain the formerly-assigned blocked card")
+	}
+	if !strings.Contains(body, "card-formerly-badge") {
+		t.Error("expected the formerly-assigned card to be marked with card-formerly-badge")
+	}
+}
+
 func TestArchivedHandler(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 

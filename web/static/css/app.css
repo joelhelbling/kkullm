@@ -754,6 +754,32 @@ body::before {
   font-size: 10px;
 }
 
+/* Agent view: a blocked card that was reassigned away from this agent. Distinct
+   from the blocked badge so it's clearly "yours, but taken." */
+.card-formerly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  margin-left: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-muted, rgba(127, 127, 127, 0.12));
+  color: var(--text-muted, #6b7280);
+  border: 1px dashed var(--text-muted, #9ca3af);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+}
+
+.card-formerly-badge::before {
+  content: "↩";
+  font-size: 10px;
+}
+
 /* Orchestrator blocked view: each tile is paired with the active block reason
    (sourced from the latest kind="block" comment) shown directly beneath it. */
 .blocked-card-wrap {

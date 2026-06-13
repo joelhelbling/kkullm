@@ -6,6 +6,7 @@
      hx-target="#drawer-container"
      hx-swap="innerHTML">
   {{if .Blocked}}<span class="card-blocked-badge" title="Blocked">Blocked</span>{{end}}
+  {{if .FormerlyAssigned}}<span class="card-formerly-badge" title="Blocked card previously assigned to you, since reassigned">Formerly assigned</span>{{end}}
   {{if .ShowProject}}
   <div class="card-tile-project">
     <span class="project-badge" style="background:{{projectColor .Project}};color:white;">{{.Project}}</span>
