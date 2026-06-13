@@ -849,6 +849,8 @@ body::before {
 
 .drawer-block-form input[type="text"],
 .drawer-unblock-form input[type="text"] {
+  appearance: none;
+  -webkit-appearance: none;
   width: 100%;
   font: inherit;
   font-family: var(--font-mono);
