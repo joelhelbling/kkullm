@@ -41,6 +41,9 @@ func RegisterRoutes(mux *http.ServeMux, s *store.Store, events *api.EventBus) {
 	// Add comment to a card
 	mux.HandleFunc("POST /ui/cards/{id}/comments", ws.handleAddComment)
 
+	// Edit a card's title and body (from the drawer)
+	mux.HandleFunc("POST /ui/cards/{id}/edit", ws.handleEditCard)
+
 	// Delete a card (from the drawer). Gated by RequireAdmin as a
 	// chokepoint for future auth.
 	mux.Handle("POST /ui/cards/{id}/delete", RequireAdmin(http.HandlerFunc(ws.handleDeleteCard)))

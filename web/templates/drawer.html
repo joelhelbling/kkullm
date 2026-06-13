@@ -1,5 +1,5 @@
 {{define "drawer"}}
-<div class="drawer-header" data-card-id="{{.Card.ID}}">
+<div class="drawer-header" data-card-id="{{.Card.ID}}" x-data="{ editing: {{if .EditError}}true{{else}}false{{end}} }">
   <button type="button"
           class="drawer-back phone-only"
           @click="closeDrawer()"
@@ -8,9 +8,28 @@
       <path d="M12 4L6 10L12 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
-  <div>
+  <div class="drawer-header-main">
     <div class="drawer-card-id">#{{.Card.ID}} · {{.Card.Project}}</div>
-    <div class="drawer-title kk-md kk-md-title">{{renderTitle .Card.Title}}</div>
+    <div x-show="!editing" class="drawer-title-row">
+      <div class="drawer-title kk-md kk-md-title">{{renderTitle .Card.Title}}</div>
+      <button type="button" class="drawer-edit-toggle" @click="editing = true" title="Edit title and description">Edit</button>
+    </div>
+    <form x-show="editing" x-cloak class="drawer-edit-form"
+          hx-post="/ui/cards/{{.Card.ID}}/edit"
+          hx-target="#drawer-container"
+          hx-swap="innerHTML">
+      {{if .EditError}}
+      <div class="form-error">{{.EditError}}</div>
+      {{end}}
+      <input class="drawer-edit-title" name="title" type="text" required
+             value="{{.Card.Title}}" placeholder="Title">
+      <textarea class="drawer-edit-body" name="body" rows="6"
+                placeholder="Description (Markdown)">{{.Card.Body}}</textarea>
+      <div class="drawer-edit-actions">
+        <button type="submit">Save</button>
+        <button type="button" class="link-cancel" @click="editing = false">Cancel</button>
+      </div>
+    </form>
   </div>
   <button class="drawer-close" @click="closeDrawer()">✕</button>
 </div>

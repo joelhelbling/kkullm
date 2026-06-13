@@ -176,6 +176,7 @@ type drawerData struct {
 	Comments     []model.Comment
 	StatusPills  []statusPill
 	CommentError string
+	EditError    string
 }
 
 func buildStatusPills(current string) []statusPill {
@@ -195,6 +196,12 @@ func buildStatusPills(current string) []statusPill {
 // renderDrawer loads comments for the card and writes the rendered drawer
 // template. commentError, when non-empty, is shown above the comment form.
 func (ws *WebServer) renderDrawer(w http.ResponseWriter, card *model.Card, commentError string) {
+	ws.renderDrawerWith(w, card, commentError, "")
+}
+
+// renderDrawerWith renders the drawer with optional inline errors for the
+// comment form (commentError) and the edit form (editError).
+func (ws *WebServer) renderDrawerWith(w http.ResponseWriter, card *model.Card, commentError, editError string) {
 	comments, err := ws.store.ListComments(card.ID)
 	if err != nil {
 		renderError(w, 500, "internal error", err)
@@ -209,6 +216,7 @@ func (ws *WebServer) renderDrawer(w http.ResponseWriter, card *model.Card, comme
 		Comments:     comments,
 		StatusPills:  buildStatusPills(card.Status),
 		CommentError: commentError,
+		EditError:    editError,
 	}); err != nil {
 		log.Printf("render drawer: %v", err)
 	}
@@ -452,6 +460,49 @@ func (ws *WebServer) handleAddComment(w http.ResponseWriter, r *http.Request) {
 	ws.events.Publish(api.Event{Type: "comment_created", Data: comment})
 
 	ws.renderDrawer(w, card, "")
+}
+
+// handleEditCard updates a card's title and body via the existing
+// store.UpdateCard path and returns the re-rendered drawer fragment. The
+// card_updated event is broadcast so other clients (and the board behind the
+// open drawer) live-refresh, mirroring the status-change and comment flows.
+func (ws *WebServer) handleEditCard(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "invalid id", 400)
+		return
+	}
+
+	card, err := ws.store.GetCard(id)
+	if err != nil {
+		renderError(w, 404, "card not found", err)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form data", 400)
+		return
+	}
+
+	title := strings.TrimSpace(r.FormValue("title"))
+	body := strings.TrimSpace(r.FormValue("body"))
+	if title == "" {
+		ws.renderDrawerWith(w, card, "", "Title can't be empty.")
+		return
+	}
+
+	updated, err := ws.store.UpdateCard(id, store.CardUpdateParams{
+		Title: &title,
+		Body:  &body,
+	})
+	if err != nil {
+		ws.renderDrawerWith(w, card, "", err.Error())
+		return
+	}
+
+	ws.events.Publish(api.Event{Type: "card_updated", Data: updated})
+
+	ws.renderDrawer(w, updated, "")
 }
 
 func (ws *WebServer) handleDeleteCard(w http.ResponseWriter, r *http.Request) {
