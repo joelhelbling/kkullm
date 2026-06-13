@@ -35,9 +35,27 @@ go install github.com/joelhelbling/kkullm@latest
 kkullm serve
 ```
 
-Then open [http://localhost:7722](http://localhost:7722). A SQLite file `kkullm.db` is created in the working directory. No CGO, no Docker, no external database — the whole thing is one pure-Go binary (SQLite is embedded via `modernc.org/sqlite`).
+Or build from a checkout — the repo uses [Task](https://taskfile.dev):
 
-To drive the board from the CLI:
+```bash
+task build        # → ./kkullm  (equivalent to: go build -o kkullm .)
+./kkullm serve
+```
+
+Then open [http://localhost:7722](http://localhost:7722). On startup the server opens `kkullm.db` in the working directory, applies the SQL migrations in `db/migrations/`, and seeds a small set of demo projects and agents so the board isn't empty on first run. No CGO, no Docker, no external database — the whole thing is one pure-Go binary (SQLite is embedded via `modernc.org/sqlite`).
+
+`serve` takes two flags:
+
+| Flag | Default | Purpose |
+| --- | --- | --- |
+| `--addr` | `:7722` | Listen address |
+| `--db` | `kkullm.db` | SQLite database file path |
+
+```bash
+kkullm serve --addr 127.0.0.1:8080 --db /var/lib/kkullm/board.db
+```
+
+The same binary is both the server and the client. The CLI talks to the server over HTTP (`/api/`); point it at a remote Kkullm with `KKULLM_SERVER=https://kkullm.example.com`. To drive the board from the CLI:
 
 ```bash
 export KKULLM_AGENT=me
@@ -46,11 +64,11 @@ kkullm card create --project personal --title "Reorder water softener salt" --st
 kkullm card list --project personal
 ```
 
-The CLI talks to the server over HTTP. Point it at a remote Kkullm with `KKULLM_SERVER=https://kkullm.example.com`.
+> **Note on auth.** Kkullm has no authentication yet. Run it on localhost or behind a reverse proxy you control. Admin and delete routes pass through a single `RequireAdmin` chokepoint that is a no-op today, reserved for future auth.
 
 ## Concepts
 
-**Cards** are the unit of work. Each card has a title, body, assignee(s), tags, comments, and a status that moves through `considering → todo → in_flight → completed → done`, with `tabled` and `blocked` as terminal alternatives. `considering` is deliberately distinct from `todo`: it's a space for ideas that are being read and discussed but are not yet ready to be pulled.
+**Cards** are the unit of work. Each card has a title, body, assignee(s), tags, comments, relations, and a status. The six statuses are `considering`, `todo`, `blocked`, `in_flight`, `completed`, and `tabled`; the common path is `considering → todo → in_flight → completed`, with `blocked` and `tabled` as side states. `considering` is deliberately distinct from `todo`: it's a space for ideas that are being read and discussed but are not yet ready to be pulled. Status changes are validated against an allowed-transitions table — you can't jump a card from `considering` straight to `completed`.
 
 **The blackboard pattern** is the load-bearing idea. Instead of a central scheduler pushing work to agents, agents read the board and pull what's relevant to them. This keeps Kkullm low-opinion: it doesn't need to know which agent should do what, only what is ready to be pulled.
 
@@ -59,6 +77,87 @@ The CLI talks to the server over HTTP. Point it at a remote Kkullm with `KKULLM_
 **Agents and projects** are first-class entities. An agent belongs to a project and has a name and a bio. Projects group cards and agents; nothing else about them is prescribed.
 
 **The two-session unattended execution pattern** is a design idea not yet wired up in code. An agent launches, pulls the list of actionable cards, picks the highest priority, composes a prompt that references relevant context and dependencies, and terminates. The relaunched agent executes that prompt. Prioritization becomes a distinct step performed with full knowledge of the board, so duplicates can merge and dependencies can be respected before the executing session starts with a single clean focus.
+
+## The Web UI
+
+The web UI is the board for humans. Start the server and open [http://localhost:7722](http://localhost:7722).
+
+![Kkullm board view](docs/images/hero-board-redesigned.png)
+
+**The board.** Cards are laid out in columns by status, in left-to-right order: **Considering → Todo → Blocked → In flight → Completed → Tabled**. Drag a card between columns to change its status; only transitions the model permits are accepted. Click a card to open its **drawer**, where you can read and edit the body, walk its relations, and add comments. Card bodies and comments render Markdown.
+
+**Scopes.** The board is scoped one of two ways: by **project** (`/ui/board?project=<id>` — the default, showing every card in a project) or by **agent** (`/ui/board?agent=<id>` — showing the cards assigned to one agent across projects). A global **Blockers** column surfaces every `blocked` card so nothing stalls silently.
+
+**Archived view.** Completed and tabled cards age out of the live board after the most-recent few; the **Archived** view (`/ui/archived`) shows the overflow for the current scope.
+
+**Admin.** The `/admin` section manages **Projects** and **Agents** (create / edit / delete) and a **Danger Zone** for destructive operations. Admin and card-delete routes are gated behind the `RequireAdmin` chokepoint described above (a pass-through today).
+
+**Live updates.** The board subscribes to a Server-Sent Events stream at `/api/events`. When anyone — a human dragging a card, or an agent calling the CLI — changes the board, every open browser updates without a refresh. The front end is server-rendered HTML enhanced with htmx, Alpine, and SortableJS; there is no client-side build step.
+
+## The CLI
+
+The `kkullm` binary is both the server and a first-class client. It is the primary interface for AI agents (the web UI is for humans), and a convenient one for humans too. Install or build it the same way as the server (`go install …` or `task build`).
+
+### Identity and config
+
+Three settings control where the CLI points and who it acts as. Each can be set by flag or environment variable; **the flag always wins over the environment variable**, which wins over the default.
+
+| Flag | Env var | Default | Meaning |
+| --- | --- | --- | --- |
+| `--server` | `KKULLM_SERVER` | `http://localhost:7722` | Server URL the CLI talks to |
+| `--as` | `KKULLM_AGENT` | _(none)_ | Acting agent identity. Required for mutating commands (`create`, `update`, `comment create`) |
+| `--project` | `KKULLM_PROJECT` | _(none)_ | Default project for project-scoped commands |
+
+Global flags available on every command: `--json` (machine-readable output), `--dry-run` (validate and preview a mutation without sending it), and `--limit` (cap rows on `list`, default 50, `0` = unlimited).
+
+### Command surface
+
+Every resource uses the same verbs — `list`, `get`, `create`, `update` — so there is no `show` and no `add`. An unknown subcommand exits non-zero rather than silently printing help.
+
+| Command | What it does |
+| --- | --- |
+| `kkullm card list` | List cards. Filters: `--status`, `--assignee`, `--tag`, `--format brief\|full`, `--archived` |
+| `kkullm card get <id>` | Show one card in full |
+| `kkullm card create` | Create a card. `--title` (required), `--body`, `--status` (default `considering`), repeatable `--assignee`/`--tag`, and relations `--blocked-by`/`--belongs-to`/`--interested-in` (card IDs). Needs an identity and a project. |
+| `kkullm card update <id>` | Update a card. Same flags as `create`; only flags you pass are changed |
+| `kkullm comment list <card-id>` | List a card's comments |
+| `kkullm comment create <card-id>` | Add a comment (`--body`, required). Needs an identity |
+| `kkullm project list` / `project create` | List or create projects (`--name`, `--description`) |
+| `kkullm agent list` / `agent create` / `agent get <name>` | Manage agents (`--name`, `--project`, `--bio`) |
+| `kkullm asset list` / `asset create` / `asset get <id>` | Manage project assets (reference links/docs) |
+| `kkullm agent-context` | Emit a versioned JSON description of the whole CLI (see below) |
+| `kkullm serve` | Start the server |
+
+IDs accept a leading `#` (`kkullm card get #42` and `kkullm card get 42` are equivalent).
+
+### The pull-and-work loop
+
+The blackboard pattern means agents read the board and pull what's relevant rather than being assigned work. A typical loop:
+
+```bash
+export KKULLM_AGENT=house
+export KKULLM_PROJECT=personal
+
+# See what's ready to be pulled
+kkullm card list --status todo --format full --json
+
+# Claim a card and start work
+kkullm card update 42 --status in_flight
+
+# Leave a note, then complete it
+kkullm comment create 42 --body "Ordered, arriving Thursday."
+kkullm card update 42 --status completed
+```
+
+### Self-describing for agents
+
+`kkullm agent-context` emits a single versioned JSON document describing every command, flag, enum (card statuses, valid status transitions, relation types), environment variable, and common workflow. Agents should run it first in an unfamiliar setup instead of parsing `--help` text:
+
+```bash
+kkullm agent-context | jq .
+```
+
+For deeper guidance on driving the CLI as an agent, see the bundled Claude Code skill at [`plugins/kkullm/skills/cli/SKILL.md`](plugins/kkullm/skills/cli/SKILL.md) — installable as `/kkullm:cli` (see [Claude Code plugin](#claude-code-plugin) below).
 
 ## Is This For You?
 
@@ -111,7 +210,7 @@ Hello, Assistant!  You are likely reading this because someone pasted Kkullm's R
 
 **Architecture at a glance.** Kkullm is a single Go binary. The server embeds a pure-Go SQLite driver (`modernc.org/sqlite`) so no CGO is required; `go install` gives the reader a working binary on any supported platform without a C toolchain. The binary serves an HTTP API under `/api/` and a server-rendered web UI at the root, with Server-Sent Events for live board updates. The CLI talks to the server over HTTP using the same client library the tests use. One process, one database file, no external dependencies to run.
 
-**Data model essentials.** A card has a title, body, status, project, assignees, tags, comments, and relations. Status moves through `considering → todo → in_flight → completed → done`, with `tabled` and `blocked` as alternative terminal states. `considering` is distinct from `todo` on purpose: it is where cards live while they are being read and discussed but are not yet ready to pull. Relations come in three types: `blocked_by` (hard dependency), `belongs_to` (sub-task), and `interested_in` (soft relationship). Projects group cards and agents. Agents are first-class entities with a name, a bio, and a project affinity; they are identified to the CLI via `KKULLM_AGENT` or the `--as` flag.
+**Data model essentials.** A card has a title, body, status, project, assignees, tags, comments, and relations. The six statuses are `considering`, `todo`, `blocked`, `in_flight`, `completed`, and `tabled`; the common path is `considering → todo → in_flight → completed`, with `blocked` and `tabled` as side states, and status changes are checked against an allowed-transitions table. `considering` is distinct from `todo` on purpose: it is where cards live while they are being read and discussed but are not yet ready to pull. Relations come in three types: `blocked_by` (hard dependency), `belongs_to` (sub-task), and `interested_in` (soft relationship). Projects group cards and agents. Agents are first-class entities with a name, a bio, and a project affinity; they are identified to the CLI via `KKULLM_AGENT` or the `--as` flag.
 
 **Design decisions with rationale.** The blackboard pattern is chosen over push-scheduling because it lets the system stay ignorant of which agent should do what — agents pull what they are drawn to, and the system only needs to know what is ready. The two-session unattended execution pattern (prioritize in one session, execute in the next) makes prioritization a distinct step performed with full board context, so duplicates can merge and dependencies can be respected before the executing session starts with a clean focus. Low-opinion design is the meta-decision: Kkullm deliberately does not bake in a methodology because the target use cases span a single software project, a content team, and a gaggle of unrelated personal-lifestyle agents. SQLite was chosen for v1 because it eliminates deployment friction (no separate database process), trades horizontal scalability for single-user simplicity (acceptable for a self-hosted personal tool), and is easy to back up (one file). Go was chosen because it produces a single static binary, has a good standard-library HTTP server, and allows the pure-Go SQLite driver that keeps the build simple.
 
