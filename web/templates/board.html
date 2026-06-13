@@ -1,4 +1,5 @@
 {{define "board"}}
+<template x-init="inArchive = false"></template>
 {{with .Project}}{{if .Description}}
 <aside class="project-intro" data-project-id="{{.ID}}" aria-label="About this project">
   <span class="project-intro-label" aria-hidden="true">{{.Name}}</span>

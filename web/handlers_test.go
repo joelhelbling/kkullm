@@ -453,6 +453,56 @@ func TestArchivedHandler(t *testing.T) {
 	}
 }
 
+// TestArchiveNavButtonHiddenInArchivedView covers issue #24: the Archive nav
+// button must not be shown as an active control while the Archived view is the
+// current view. The nav lives in the layout shell and views are HTMX fragments
+// swapped into #board-container, so the Archived fragment signals archive mode
+// (inArchive = true) while the board fragment clears it (inArchive = false),
+// and the nav button is gated with x-show="!inArchive".
+func TestArchiveNavButtonHiddenInArchivedView(t *testing.T) {
+	mux := setupTestMux(t)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	get := func(path string) string {
+		resp, err := http.Get(ts.URL + path)
+		if err != nil {
+			t.Fatalf("GET %s: %v", path, err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			t.Fatalf("GET %s: expected 200, got %d", path, resp.StatusCode)
+		}
+		buf, _ := io.ReadAll(resp.Body)
+		return string(buf)
+	}
+
+	// The layout nav must gate the Archive control on the inArchive flag so it
+	// disappears once the archived view is active.
+	layout := get("/")
+	if !strings.Contains(layout, `class="nav-archived"`) {
+		t.Fatal("expected layout to contain the Archive nav button")
+	}
+	if !strings.Contains(layout, `x-show="!inArchive"`) {
+		t.Error(`expected the Archive nav button to be gated with x-show="!inArchive"`)
+	}
+
+	// The archived fragment must put the UI into archive mode.
+	archived := get("/ui/archived?project=1")
+	if !strings.Contains(archived, "inArchive = true") {
+		t.Error("expected archived fragment to set inArchive = true")
+	}
+
+	// A normal board view must clear archive mode so the button reappears.
+	board := get("/ui/board?project=1")
+	if !strings.Contains(board, "inArchive = false") {
+		t.Error("expected board fragment to set inArchive = false")
+	}
+	if strings.Contains(board, "inArchive = true") {
+		t.Error("board fragment must not set archive mode")
+	}
+}
+
 func strPtr(s string) *string { return &s }
 
 func TestAddCommentHappyPath(t *testing.T) {

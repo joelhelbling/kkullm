@@ -14,6 +14,7 @@ function kkullm() {
     blockerCount: 0,
     theme: 'light',
     boardLoaded: false,
+    inArchive: false,
 
     // Compose modal
     composeOpen: false,
@@ -316,6 +317,7 @@ function kkullm() {
         return;
       }
 
+      this.inArchive = false;
       htmx.ajax('GET', url, { target: '#board-container', swap: 'innerHTML' });
     },
 
@@ -328,6 +330,7 @@ function kkullm() {
       } else {
         return;
       }
+      this.inArchive = true;
       htmx.ajax('GET', url, { target: '#board-container', swap: 'innerHTML' });
     },
 
