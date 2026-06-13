@@ -1,0 +1,112 @@
+{{define "admin_assets"}}
+{{template "admin_shell_top" .}}
+<div class="admin-header">
+  <h1>Assets</h1>
+  <button type="button" class="btn-small" onclick="openAssetModal('create')">+ New asset</button>
+</div>
+<p class="admin-desc">Create, edit, or delete project assets — named links and references scoped to a project (repos, dashboards, docs).</p>
+{{if .Error}}<div class="admin-error" role="alert">{{.Error}}</div>{{end}}
+<ul class="admin-list">
+{{range .Assets}}
+  <li class="admin-row" data-asset-id="{{.ID}}" data-asset-name="{{.Name}}" data-asset-description="{{.Description}}" data-asset-url="{{.URL}}" data-asset-project="{{.Project}}">
+    <span class="admin-name">{{.Name}}</span>
+    <span class="admin-meta">project: {{.Project}}{{if .URL}} · <a href="{{.URL}}" target="_blank" rel="noopener noreferrer">{{.URL}}</a>{{end}}</span>
+    <span class="admin-row-actions">
+      <button type="button" class="btn-small" onclick="openAssetModal('edit', this.closest('.admin-row'))">Edit</button>
+      <form method="post" action="/admin/assets/{{.ID}}/delete" class="admin-delete-form">
+        <button type="submit" class="btn-outlined-danger"
+                onclick="return confirmDeleteAsset(this)">Delete</button>
+      </form>
+    </span>
+  </li>
+{{end}}
+</ul>
+
+<div id="asset-modal" class="modal" hidden>
+  <div class="modal-content">
+    <h2 id="as-title">New asset</h2>
+    <form method="post" id="asset-form">
+      <label for="as-name">Name</label>
+      <input id="as-name" type="text" name="name" autocomplete="off" required>
+      <div id="as-project-create">
+        <label for="as-project">Project</label>
+        <select id="as-project" name="project">
+          <option value="">— choose a project —</option>
+          {{range .Projects}}<option value="{{.Name}}">{{.Name}}</option>{{end}}
+        </select>
+      </div>
+      <div id="as-project-edit" hidden>
+        <label>Project</label>
+        <p id="as-project-readonly" class="admin-readonly"></p>
+      </div>
+      <label for="as-url">URL</label>
+      <input id="as-url" type="text" name="url" autocomplete="off">
+      <label for="as-description">Description</label>
+      <textarea id="as-description" name="description" rows="3"></textarea>
+      <div class="modal-actions">
+        <button type="button" onclick="document.getElementById('asset-modal').hidden = true">Cancel</button>
+        <button type="submit" class="btn-small">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openAssetModal(mode, row) {
+  const form = document.getElementById('asset-form');
+  const createBlock = document.getElementById('as-project-create');
+  const editBlock = document.getElementById('as-project-edit');
+  const select = document.getElementById('as-project');
+  if (mode === 'edit') {
+    document.getElementById('as-title').textContent = 'Edit asset';
+    form.action = '/admin/assets/' + row.dataset.assetId + '/update';
+    document.getElementById('as-name').value = row.dataset.assetName;
+    document.getElementById('as-url').value = row.dataset.assetUrl;
+    document.getElementById('as-description').value = row.dataset.assetDescription;
+    document.getElementById('as-project-readonly').textContent = row.dataset.assetProject;
+    createBlock.hidden = true;
+    editBlock.hidden = false;
+    select.disabled = true;
+  } else {
+    document.getElementById('as-title').textContent = 'New asset';
+    form.action = '/admin/assets/create';
+    document.getElementById('as-name').value = '';
+    document.getElementById('as-url').value = '';
+    document.getElementById('as-description').value = '';
+    select.value = '';
+    createBlock.hidden = false;
+    editBlock.hidden = true;
+    select.disabled = false;
+  }
+  document.getElementById('asset-modal').hidden = false;
+}
+function confirmDeleteAsset(btn) {
+  const name = btn.closest('.admin-row').dataset.assetName;
+  return confirm('Delete asset ' + name + '?');
+}
+</script>
+{{if .Reopen}}
+<script>
+(function () {
+  var select = document.getElementById('as-project');
+  document.getElementById('as-name').value = {{.Form.Name}};
+  document.getElementById('as-url').value = {{.Form.URL}};
+  document.getElementById('as-description').value = {{.Form.Description}};
+  {{if eq .Reopen "edit"}}
+  document.getElementById('as-title').textContent = 'Edit asset';
+  document.getElementById('asset-form').action = '/admin/assets/{{.Form.ID}}/update';
+  document.getElementById('as-project-readonly').textContent = {{.Form.Project}};
+  document.getElementById('as-project-create').hidden = true;
+  document.getElementById('as-project-edit').hidden = false;
+  select.disabled = true;
+  {{else}}
+  document.getElementById('as-title').textContent = 'New asset';
+  document.getElementById('asset-form').action = '/admin/assets/create';
+  select.value = {{.Form.Project}};
+  {{end}}
+  document.getElementById('asset-modal').hidden = false;
+})();
+</script>
+{{end}}
+{{template "admin_shell_bottom" .}}
+{{end}}
