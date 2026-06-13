@@ -122,7 +122,6 @@ func (s *Server) updateCard(w http.ResponseWriter, r *http.Request) {
 		Assignees []string             `json:"assignees"`
 		Tags      []string             `json:"tags"`
 		Relations []model.CardRelation `json:"relations"`
-		Force     bool                 `json:"force"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, 400, "invalid JSON")
@@ -137,7 +136,6 @@ func (s *Server) updateCard(w http.ResponseWriter, r *http.Request) {
 		Assignees: body.Assignees,
 		Tags:      body.Tags,
 		Relations: body.Relations,
-		Force:     body.Force,
 		Actor:     actorFromRequest(r),
 	})
 	if err != nil {

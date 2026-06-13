@@ -328,14 +328,6 @@ func wantsUnblock(r *http.Request) bool {
 	return v == "1" || v == "true"
 }
 
-// wantsForce reports whether the request carries the force-move signal. The
-// board's Alt-drop sends ?force=1 to bypass the status-transition matrix
-// (status validity is still enforced server-side). Mirrors wantsUnblock.
-func wantsForce(r *http.Request) bool {
-	v := r.URL.Query().Get("force")
-	return v == "1" || v == "true"
-}
-
 // postUnblockComment clears the blocked flag (already done by the caller's
 // UpdateCard) by posting the kind="unblock" note authored by the operator, so
 // the timeline records why/when the card was unblocked. The reason defaults to
@@ -372,7 +364,7 @@ func (ws *WebServer) handleStatusChange(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	params := store.CardUpdateParams{Status: &newStatus, Actor: webOperator, Force: wantsForce(r)}
+	params := store.CardUpdateParams{Status: &newStatus, Actor: webOperator}
 	unblock := wantsUnblock(r)
 	if unblock {
 		blocked := false

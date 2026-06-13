@@ -34,7 +34,7 @@ func Migrate(db *sql.DB) error {
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT NOT NULL PRIMARY KEY)`); err != nil {
 		return fmt.Errorf("create schema_migrations: %w", err)
 	}
-	for _, name := range []string{"migrations/001_initial.sql", "migrations/002_comments_author_snapshot.sql", "migrations/003_blocked_flag.sql", "migrations/004_card_audit.sql"} {
+	for _, name := range []string{"migrations/001_initial.sql", "migrations/002_comments_author_snapshot.sql", "migrations/003_blocked_flag.sql", "migrations/004_card_audit.sql", "migrations/005_drop_forced_column.sql"} {
 		var applied int
 		if err := db.QueryRow(`SELECT COUNT(*) FROM schema_migrations WHERE version = ?`, name).Scan(&applied); err != nil {
 			return fmt.Errorf("check %s: %w", name, err)

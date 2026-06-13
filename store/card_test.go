@@ -495,12 +495,12 @@ func TestUpdateCardAllowsAnyTransition(t *testing.T) {
 	}
 }
 
-func TestUpdateCardForceStillRejectsInvalidStatus(t *testing.T) {
+func TestUpdateCardRejectsInvalidStatus(t *testing.T) {
 	s := setupTestDB(t)
 	proj := createTestProject(t, s)
 
 	card, err := s.CreateCard(CardCreateParams{
-		Title:     "Force invalid status",
+		Title:     "Invalid status",
 		ProjectID: proj.ID,
 		Status:    "considering",
 	})
@@ -508,44 +508,9 @@ func TestUpdateCardForceStillRejectsInvalidStatus(t *testing.T) {
 		t.Fatalf("CreateCard: %v", err)
 	}
 
-	// Force bypasses the transition rule but NOT status validity.
-	if _, err := s.UpdateCard(card.ID, CardUpdateParams{Status: strPtr("bogus"), Force: true}); err == nil {
-		t.Fatal("expected error for invalid status 'bogus' even with Force")
-	}
-}
-
-func TestUpdateCardLegalTransitionNotForced(t *testing.T) {
-	s := setupTestDB(t)
-	proj := createTestProject(t, s)
-
-	card, err := s.CreateCard(CardCreateParams{
-		Title:     "Legal transition",
-		ProjectID: proj.ID,
-		Status:    "considering",
-	})
-	if err != nil {
-		t.Fatalf("CreateCard: %v", err)
-	}
-
-	if _, err := s.UpdateCard(card.ID, CardUpdateParams{Status: strPtr("todo")}); err != nil {
-		t.Fatalf("UpdateCard legal transition: %v", err)
-	}
-
-	events, err := s.ListCardEvents(card.ID)
-	if err != nil {
-		t.Fatalf("ListCardEvents: %v", err)
-	}
-	var statusEvent *model.CardEvent
-	for i := range events {
-		if events[i].EventType == "status_changed" {
-			statusEvent = &events[i]
-		}
-	}
-	if statusEvent == nil {
-		t.Fatal("expected a status_changed event")
-	}
-	if statusEvent.Forced {
-		t.Errorf("unforced status_changed event Forced = true, want false")
+	// An unknown status is rejected even though any real transition is allowed.
+	if _, err := s.UpdateCard(card.ID, CardUpdateParams{Status: strPtr("bogus")}); err == nil {
+		t.Fatal("expected error for invalid status 'bogus'")
 	}
 }
 

@@ -20,7 +20,7 @@ Discovery below).
 Two introspection layers keep you from guessing:
 
 - `kkullm agent-context` — emits a versioned JSON document describing every
-  command, flag, enum (card statuses, status transitions, relation types),
+  command, flag, enum (card statuses, relation types),
   environment variable, and common workflow. **Run this first** in an
   unfamiliar kkullm setup.
 - `kkullm <command> --help` — per-command flags and usage.
@@ -34,7 +34,7 @@ The CLI follows a consistent, agent-native contract. Rely on it:
 - **Verbs are consistent.** Mutation is always `create` or `update` — nothing
   else changes state. Reading is `list` and `get` (plus the occasional
   resource-specific read such as `card events`, which is list-style). There is
-  no `show` and no `add`; blocking, unblocking, and forced moves are *flags on
+  no `show` and no `add`; blocking and unblocking are *flags on
   `update`*, not new verbs, so the contract holds. An unknown subcommand fails
   with a non-zero exit, so a typo never silently no-ops.
 - **`--json` everywhere.** Every data-returning command accepts `--json` and
@@ -69,9 +69,10 @@ considering → todo → in_flight → completed
 it stays in its real status column. Set or clear it with the flags on
 `card update` (see below); it never changes status or assignees.
 
-Transitions are validated server-side — an illegal jump is rejected with a
-teaching error. For the exact status set and the full transition map, read the
-`enums` section of `kkullm agent-context` rather than memorizing it.
+A card may move from any status to any other status — there are no transition
+rules. The only check is that the target is a real status; an unknown status is
+rejected. For the exact status set, read the `enums` section of
+`kkullm agent-context` rather than memorizing it.
 
 Cards relate to one another three ways: `blocked_by`, `belongs_to`, and
 `interested_in`.
@@ -104,12 +105,6 @@ current column, and the reason is recorded as a tagged comment in its timeline:
 `kkullm card update <id> --blocked --reason "waiting on the auth spec" --as <agent>`
 When the blocker clears, unblock it (optionally moving it in the same call):
 `kkullm card update <id> --unblocked --status in_flight --as <agent>`
-
-The status transitions are guardrails, not a cage. If you need to move a card
-to a status the matrix would normally reject, add `--force` — it bypasses the
-transition rule (the target must still be a real status) and the move is
-recorded as *forced* in the card's audit trail:
-`kkullm card update <id> --status completed --force --as <agent>`
 
 ### Reading a card's audit trail
 
