@@ -535,6 +535,17 @@ function kkullm() {
             const oe = evt.originalEvent;
             if (oe && typeof oe.altKey === 'boolean') this.altHeld = oe.altKey;
           },
+          // Track the modifier from the live dragover event. SortableJS passes
+          // the native event as onMove's 2nd arg, and dragover reliably carries
+          // altKey in all browsers — unlike the drop/dragend event at onEnd,
+          // which is unreliable in Chrome/Safari. This keeps altHeld accurate
+          // right up to the drop, immune to mid-drag blur/keyup clearing. (#71)
+          onMove: (evt, originalEvent) => {
+            if (originalEvent && typeof originalEvent.altKey === 'boolean') {
+              this.altHeld = originalEvent.altKey;
+            }
+            return true;
+          },
           onEnd: (evt) => this.onCardDrop(evt),
         });
       });
