@@ -129,6 +129,7 @@ type CardUpdateRequest struct {
 	Title     *string              `json:"title,omitempty"`
 	Body      *string              `json:"body,omitempty"`
 	Status    *string              `json:"status,omitempty"`
+	Blocked   *bool                `json:"blocked,omitempty"`
 	Assignees []string             `json:"assignees,omitempty"`
 	Tags      []string             `json:"tags,omitempty"`
 	Relations []model.CardRelation `json:"relations,omitempty"`
@@ -198,8 +199,11 @@ func (c *Client) ListComments(cardID int) ([]model.Comment, error) {
 	return comments, err
 }
 
-func (c *Client) CreateComment(cardID int, agent, body string) (*model.Comment, error) {
+func (c *Client) CreateComment(cardID int, agent, body, kind string) (*model.Comment, error) {
 	reqBody := map[string]string{"agent": agent, "body": body}
+	if kind != "" {
+		reqBody["kind"] = kind
+	}
 	var comment model.Comment
 	err := c.do("POST", "/api/cards/"+strconv.Itoa(cardID)+"/comments", reqBody, &comment)
 	return &comment, err

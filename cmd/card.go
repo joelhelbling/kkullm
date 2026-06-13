@@ -160,6 +160,9 @@ var (
 	cardUpdateTitle        string
 	cardUpdateBody         string
 	cardUpdateStatus       string
+	cardUpdateBlocked      bool
+	cardUpdateUnblocked    bool
+	cardUpdateReason       string
 	cardUpdateAssignees    []string
 	cardUpdateTags         []string
 	cardUpdateBlockedBy    []int
@@ -167,13 +170,60 @@ var (
 	cardUpdateInterestedIn []int
 )
 
+// blockedResolution is the outcome of validating the --blocked/--unblocked/
+// --reason flag combination on `card update`.
+type blockedResolution struct {
+	// BlockedValue is nil when neither flag was given (leave the flag
+	// untouched), or points to the new boolean value of the blocked flag.
+	BlockedValue *bool
+	// CommentKind/CommentBody describe a kinded comment to post, when a
+	// --reason was supplied. Empty CommentKind means no comment.
+	CommentKind string
+	CommentBody string
+}
+
+// resolveBlockedFlags validates the mutually-exclusive --blocked/--unblocked
+// flags and the optional --reason. --blocked sets the flag, --unblocked clears
+// it; a --reason posts a kinded ("block"/"unblock") comment. Blocking sets ONLY
+// the flag — it never touches status or assignees.
+func resolveBlockedFlags(blocked, unblocked bool, reason string) (blockedResolution, error) {
+	var res blockedResolution
+	if blocked && unblocked {
+		return res, fmt.Errorf("--blocked and --unblocked are mutually exclusive")
+	}
+	if reason != "" && !blocked && !unblocked {
+		return res, fmt.Errorf("--reason requires --blocked or --unblocked")
+	}
+	if !blocked && !unblocked {
+		return res, nil
+	}
+	v := blocked // true when --blocked, false when --unblocked
+	res.BlockedValue = &v
+	if reason != "" {
+		if blocked {
+			res.CommentKind = "block"
+		} else {
+			res.CommentKind = "unblock"
+		}
+		res.CommentBody = reason
+	}
+	return res, nil
+}
+
 var cardUpdateCmd = &cobra.Command{
 	Use:   "update <id>",
 	Short: "Update a card",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		requireAgent()
+		agent := requireAgent()
 		id, err := parseID(args[0])
+		if err != nil {
+			return err
+		}
+
+		// Validate the blocked-flag combination up front so a bad invocation
+		// fails before any mutation.
+		blockRes, err := resolveBlockedFlags(cardUpdateBlocked, cardUpdateUnblocked, cardUpdateReason)
 		if err != nil {
 			return err
 		}
@@ -198,6 +248,9 @@ var cardUpdateCmd = &cobra.Command{
 		if cmd.Flags().Changed("tag") {
 			req.Tags = cardUpdateTags
 		}
+		// Setting/clearing the blocked flag is orthogonal: it never alters
+		// status or assignees on its own.
+		req.Blocked = blockRes.BlockedValue
 
 		relations := buildRelations(cardUpdateBlockedBy, cardUpdateBelongsTo, cardUpdateInterestedIn)
 		if len(relations) > 0 {
@@ -205,7 +258,13 @@ var cardUpdateCmd = &cobra.Command{
 		}
 
 		if dryRun {
-			return emitDryRun(fmt.Sprintf("would update card #%d", id), req)
+			preview := map[string]any{"update": req}
+			if blockRes.CommentKind != "" {
+				preview["comment"] = map[string]string{
+					"kind": blockRes.CommentKind, "body": blockRes.CommentBody, "agent": agent,
+				}
+			}
+			return emitDryRun(fmt.Sprintf("would update card #%d", id), preview)
 		}
 
 		c := client.New(serverURL)
@@ -213,6 +272,15 @@ var cardUpdateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		// A --reason posts a kinded comment authored by the acting agent,
+		// mirroring how `comment create` is authored.
+		if blockRes.CommentKind != "" {
+			if _, err := c.CreateComment(id, agent, blockRes.CommentBody, blockRes.CommentKind); err != nil {
+				return fmt.Errorf("card updated but block comment failed: %w", err)
+			}
+		}
+
 		return emitResult(fmt.Sprintf("Updated card #%d: %s", card.ID, card.Title), card)
 	},
 }
@@ -297,6 +365,9 @@ func init() {
 	cardUpdateCmd.Flags().StringVar(&cardUpdateTitle, "title", "", "New title")
 	cardUpdateCmd.Flags().StringVar(&cardUpdateBody, "body", "", "New body")
 	cardUpdateCmd.Flags().StringVar(&cardUpdateStatus, "status", "", "New status")
+	cardUpdateCmd.Flags().BoolVar(&cardUpdateBlocked, "blocked", false, "Set the blocked flag (leaves status and assignees intact)")
+	cardUpdateCmd.Flags().BoolVar(&cardUpdateUnblocked, "unblocked", false, "Clear the blocked flag (may combine with --status/--assignee)")
+	cardUpdateCmd.Flags().StringVar(&cardUpdateReason, "reason", "", "Reason for --blocked/--unblocked; posts a kinded comment")
 	cardUpdateCmd.Flags().StringSliceVar(&cardUpdateAssignees, "assignee", nil, "Assignee (repeatable)")
 	cardUpdateCmd.Flags().StringSliceVar(&cardUpdateTags, "tag", nil, "Tag (repeatable)")
 	cardUpdateCmd.Flags().IntSliceVar(&cardUpdateBlockedBy, "blocked-by", nil, "Blocked by card ID (repeatable)")
