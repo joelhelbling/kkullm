@@ -669,3 +669,66 @@ func TestDeleteCard_CascadesCommentsAndAssignees(t *testing.T) {
 		t.Errorf("DeleteCard on missing id: expected error, got nil")
 	}
 }
+
+func TestListFormerlyAssignedBlockedCards(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+	createTestAgent(t, s, "alice", proj.ID)
+	createTestAgent(t, s, "bob", proj.ID)
+
+	boolPtr := func(b bool) *bool { return &b }
+
+	// Card A: blocked & currently assigned to alice.
+	cardA, err := s.CreateCard(CardCreateParams{Title: "A", ProjectID: proj.ID, Assignees: []string{"alice"}})
+	if err != nil {
+		t.Fatalf("create A: %v", err)
+	}
+	if _, err := s.UpdateCard(cardA.ID, CardUpdateParams{Blocked: boolPtr(true)}); err != nil {
+		t.Fatalf("block A: %v", err)
+	}
+
+	// Card B: blocked, assigned to alice then reassigned to bob (assignee_removed for alice).
+	cardB, err := s.CreateCard(CardCreateParams{Title: "B", ProjectID: proj.ID, Assignees: []string{"alice"}})
+	if err != nil {
+		t.Fatalf("create B: %v", err)
+	}
+	if _, err := s.UpdateCard(cardB.ID, CardUpdateParams{Blocked: boolPtr(true), Assignees: []string{"bob"}}); err != nil {
+		t.Fatalf("reassign B: %v", err)
+	}
+
+	// Card C: blocked, never assigned to alice.
+	cardC, err := s.CreateCard(CardCreateParams{Title: "C", ProjectID: proj.ID, Assignees: []string{"bob"}})
+	if err != nil {
+		t.Fatalf("create C: %v", err)
+	}
+	if _, err := s.UpdateCard(cardC.ID, CardUpdateParams{Blocked: boolPtr(true)}); err != nil {
+		t.Fatalf("block C: %v", err)
+	}
+
+	// Card D: formerly assigned to alice but NOT blocked (reassigned away, unblocked).
+	cardD, err := s.CreateCard(CardCreateParams{Title: "D", ProjectID: proj.ID, Assignees: []string{"alice"}})
+	if err != nil {
+		t.Fatalf("create D: %v", err)
+	}
+	if _, err := s.UpdateCard(cardD.ID, CardUpdateParams{Assignees: []string{"bob"}}); err != nil {
+		t.Fatalf("reassign D: %v", err)
+	}
+
+	got, err := s.ListFormerlyAssignedBlockedCards("alice")
+	if err != nil {
+		t.Fatalf("ListFormerlyAssignedBlockedCards: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d cards, want 1 (only B)", len(got))
+	}
+	if got[0].ID != cardB.ID {
+		t.Errorf("got card %d, want B (%d)", got[0].ID, cardB.ID)
+	}
+	if !got[0].Blocked {
+		t.Errorf("expected B to be blocked")
+	}
+	// Assignees should load too (B is now bob's).
+	if len(got[0].Assignees) != 1 || got[0].Assignees[0] != "bob" {
+		t.Errorf("B assignees = %v, want [bob]", got[0].Assignees)
+	}
+}
