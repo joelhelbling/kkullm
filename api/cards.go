@@ -110,6 +110,7 @@ func (s *Server) updateCard(w http.ResponseWriter, r *http.Request) {
 		Title     *string              `json:"title"`
 		Body      *string              `json:"body"`
 		Status    *string              `json:"status"`
+		Blocked   *bool                `json:"blocked"`
 		Assignees []string             `json:"assignees"`
 		Tags      []string             `json:"tags"`
 		Relations []model.CardRelation `json:"relations"`
@@ -123,6 +124,7 @@ func (s *Server) updateCard(w http.ResponseWriter, r *http.Request) {
 		Title:     body.Title,
 		Body:      body.Body,
 		Status:    body.Status,
+		Blocked:   body.Blocked,
 		Assignees: body.Assignees,
 		Tags:      body.Tags,
 		Relations: body.Relations,

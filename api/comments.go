@@ -36,6 +36,7 @@ func (s *Server) createComment(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Agent string `json:"agent"`
 		Body  string `json:"body"`
+		Kind  string `json:"kind"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, 400, "invalid JSON")
@@ -49,6 +50,10 @@ func (s *Server) createComment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "body is required")
 		return
 	}
+	if !model.ValidCommentKind(body.Kind) {
+		writeError(w, 400, "invalid kind: must be empty, \"block\", or \"unblock\"")
+		return
+	}
 
 	agent, err := s.store.GetAgentByName(body.Agent)
 	if err != nil {
@@ -56,7 +61,7 @@ func (s *Server) createComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	comment, err := s.store.CreateComment(cardID, agent.ID, body.Body)
+	comment, err := s.store.CreateComment(cardID, agent.ID, body.Body, body.Kind)
 	if err != nil {
 		writeError(w, 500, err.Error())
 		return

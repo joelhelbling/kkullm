@@ -63,7 +63,7 @@ func TestUpdateAgent_OK_BackfillsHistoricalComments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateCard: %v", err)
 	}
-	if _, err := s.CreateComment(card.ID, agent.ID, "a comment"); err != nil {
+	if _, err := s.CreateComment(card.ID, agent.ID, "a comment", ""); err != nil {
 		t.Fatalf("CreateComment: %v", err)
 	}
 
@@ -137,7 +137,7 @@ func TestDeleteAgent_UnassignsCards_PreservesComments(t *testing.T) {
 		t.Fatalf("CreateCard: %v", err)
 	}
 
-	if _, err := s.CreateComment(card.ID, agent.ID, "Working on it"); err != nil {
+	if _, err := s.CreateComment(card.ID, agent.ID, "Working on it", ""); err != nil {
 		t.Fatalf("CreateComment: %v", err)
 	}
 

@@ -22,7 +22,7 @@ func TestPurge_WipesAllDataAndReSeeds(t *testing.T) {
 		t.Fatalf("CreateCard: %v", err)
 	}
 
-	if _, err := s.CreateComment(card.ID, agent.ID, "doomed comment"); err != nil {
+	if _, err := s.CreateComment(card.ID, agent.ID, "doomed comment", ""); err != nil {
 		t.Fatalf("CreateComment: %v", err)
 	}
 

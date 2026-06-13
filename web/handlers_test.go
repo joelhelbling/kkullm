@@ -166,7 +166,7 @@ func TestDrawerHandler(t *testing.T) {
 	}
 
 	// Add a comment (user agent has ID 1 from seed)
-	_, err = st.CreateComment(card.ID, 1, "Test comment")
+	_, err = st.CreateComment(card.ID, 1, "Test comment", "")
 	if err != nil {
 		t.Fatalf("create comment: %v", err)
 	}

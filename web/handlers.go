@@ -509,7 +509,7 @@ func (ws *WebServer) handleAddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	comment, err := ws.store.CreateComment(card.ID, agent.ID, body)
+	comment, err := ws.store.CreateComment(card.ID, agent.ID, body, "")
 	if err != nil {
 		renderError(w, 500, "internal error", err)
 		return
