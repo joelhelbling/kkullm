@@ -33,6 +33,11 @@ function kkullm() {
 
     init() {
       this.bootstrapData();
+      // Apply the default project after the x-for options have rendered so
+      // the nav <select> visibly reflects it (see bootstrapData / #59).
+      this.$nextTick(() => {
+        if (this._defaultProjectId) this.currentProject = this._defaultProjectId;
+      });
       this.initTheme();
       this.connectSSE();
 
@@ -137,9 +142,13 @@ function kkullm() {
         const data = JSON.parse(el.textContent);
         this.projects = data.projects || [];
         this.agents = data.agents || [];
-        if (data.defaultProjectId) {
-          this.currentProject = String(data.defaultProjectId);
-        }
+        // Defer seeding currentProject until after Alpine renders the
+        // project <option>s (x-for). Setting it synchronously here runs
+        // before the options exist, so x-model can't match and the
+        // <select> sticks on its first static option ("All projects")
+        // even though state holds the id. (#59)
+        this._defaultProjectId = data.defaultProjectId
+          ? String(data.defaultProjectId) : null;
         if (this.agents.length > 0) {
           this.currentAgent = String(this.agents[0].id);
         }
