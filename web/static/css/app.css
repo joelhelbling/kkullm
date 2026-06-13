@@ -1025,6 +1025,113 @@ body::before {
   color: var(--text-primary);
 }
 
+.drawer-header-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.drawer-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.drawer-edit-toggle {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.drawer-edit-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.drawer-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drawer-edit-title,
+.drawer-edit-body {
+  width: 100%;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  line-height: 1.45;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.drawer-edit-body {
+  resize: vertical;
+}
+
+.drawer-edit-title:focus,
+.drawer-edit-body:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-elevated);
+}
+
+.drawer-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.drawer-edit-actions button[type="submit"] {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 7px 14px;
+  border: 1px solid var(--text-primary);
+  border-radius: 999px;
+  background: var(--text-primary);
+  color: var(--bg-page);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.drawer-edit-actions button[type="submit"]:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.link-cancel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.link-cancel:hover {
+  color: var(--text-primary);
+}
+
 .drawer-close {
   cursor: pointer;
   color: var(--text-secondary);

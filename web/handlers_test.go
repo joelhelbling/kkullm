@@ -565,6 +565,123 @@ func TestAddCommentHappyPath(t *testing.T) {
 	}
 }
 
+func TestEditCardHappyPath(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Original title",
+		Body:      "Original body",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	form := strings.NewReader("title=New+title&body=New+body+with+%2A%2Abold%2A%2A")
+	req, err := http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%s/ui/cards/%d/edit", ts.URL, card.ID), form)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	body := string(bodyBytes)
+
+	// Response is the re-rendered drawer fragment with the new title and the
+	// Markdown-rendered body.
+	if !strings.Contains(body, "drawer-header") {
+		t.Errorf("expected drawer fragment in response, got: %s", body)
+	}
+	if !strings.Contains(body, "New title") {
+		t.Errorf("expected new title in re-rendered drawer, got: %s", body)
+	}
+	if !strings.Contains(body, "<strong>bold</strong>") {
+		t.Errorf("expected Markdown-rendered body in drawer, got: %s", body)
+	}
+
+	updated, err := st.GetCard(card.ID)
+	if err != nil {
+		t.Fatalf("GetCard: %v", err)
+	}
+	if updated.Title != "New title" {
+		t.Errorf("expected stored title 'New title', got %q", updated.Title)
+	}
+	if updated.Body != "New body with **bold**" {
+		t.Errorf("expected stored body 'New body with **bold**', got %q", updated.Body)
+	}
+}
+
+func TestEditCardRejectsEmptyTitle(t *testing.T) {
+	mux, st := setupTestMuxWithStore(t)
+
+	card, err := st.CreateCard(store.CardCreateParams{
+		Title:     "Keep me",
+		Body:      "Keep body",
+		Status:    "todo",
+		ProjectID: 1,
+	})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	form := strings.NewReader("title=%20%20&body=whatever")
+	req, _ := http.NewRequest(http.MethodPost,
+		fmt.Sprintf("%s/ui/cards/%d/edit", ts.URL, card.ID), form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200 (drawer re-render), got %d", resp.StatusCode)
+	}
+
+	updated, _ := st.GetCard(card.ID)
+	if updated.Title != "Keep me" {
+		t.Errorf("expected title unchanged on empty submit, got %q", updated.Title)
+	}
+}
+
+func TestEditCardBadID(t *testing.T) {
+	mux := setupTestMux(t)
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	form := strings.NewReader("title=x&body=y")
+	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/ui/cards/99999/edit", form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 404 {
+		t.Errorf("expected 404 for missing card, got %d", resp.StatusCode)
+	}
+}
+
 func TestFullFlow(t *testing.T) {
 	mux, st := setupTestMuxWithStore(t)
 
