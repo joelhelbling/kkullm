@@ -195,6 +195,37 @@ func TestMigrate_ConvertsBlockedStatusToFlag(t *testing.T) {
 	}
 }
 
+func TestMigrate_CreatesCardEventsTable(t *testing.T) {
+	d, err := Open(":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	if err := Migrate(d); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	cols := map[string]struct{}{}
+	rows, err := d.Query("PRAGMA table_info(card_events)")
+	if err != nil {
+		t.Fatalf("PRAGMA table_info(card_events): %v", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid, notNull, pk int
+		var name, ctype string
+		var dflt sql.NullString
+		_ = rows.Scan(&cid, &name, &ctype, &notNull, &dflt, &pk)
+		cols[name] = struct{}{}
+	}
+
+	for _, want := range []string{"id", "card_id", "actor", "event_type", "from_value", "to_value", "forced", "created_at"} {
+		if _, ok := cols[want]; !ok {
+			t.Errorf("expected card_events.%s column after migrate", want)
+		}
+	}
+}
+
 func TestSeedCreatesUserAgent(t *testing.T) {
 	database, err := Open(":memory:")
 	if err != nil {
