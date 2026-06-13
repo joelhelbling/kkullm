@@ -129,6 +129,21 @@
   <!-- Compose modal -->
   {{template "compose" .}}
 
+  <!-- Blocked-move decision modal (#60) -->
+  <div class="modal blockmove-modal" x-show="blockMove.open" x-cloak
+       @click.self="resolveBlockMove(null)"
+       @keydown.escape.window="blockMove.open && resolveBlockMove(null)">
+    <div class="modal-content">
+      <h2 class="blockmove-title">Move a blocked card</h2>
+      <p class="blockmove-message" x-text="blockMove.message"></p>
+      <div class="modal-actions blockmove-actions">
+        <button type="button" class="btn-ghost" @click="resolveBlockMove(null)">Cancel</button>
+        <button type="button" class="link-cancel" @click="resolveBlockMove('keep')">Move but keep blocked</button>
+        <button type="button" class="btn-primary" @click="resolveBlockMove('unblock')">Unblock and move</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast container -->
   <div id="toast-container"></div>
 

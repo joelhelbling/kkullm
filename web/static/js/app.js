@@ -14,6 +14,7 @@ function kkullm() {
     boardLoaded: false,
     inArchive: false,
     altHeld: false,
+    blockMove: { open: false, message: '', _resolve: null },
 
     // Compose modal
     composeOpen: false,
@@ -541,7 +542,23 @@ function kkullm() {
       }
     },
 
-    onCardDrop(evt) {
+    // Opens the 3-way blocked-move modal and resolves to 'unblock', 'keep',
+    // or null (cancel). Promise-based so onCardDrop can await the choice.
+    askBlockMove(newStatus) {
+      this.blockMove.message =
+        'This card is blocked. Move it to ' + newStatus + '?';
+      this.blockMove.open = true;
+      return new Promise((resolve) => { this.blockMove._resolve = resolve; });
+    },
+
+    resolveBlockMove(choice) {
+      this.blockMove.open = false;
+      const r = this.blockMove._resolve;
+      this.blockMove._resolve = null;
+      if (r) r(choice);
+    },
+
+    async onCardDrop(evt) {
       const cardEl = evt.item;
       const cardId = cardEl.dataset.cardId;
       const newStatus = evt.to.dataset.status;
@@ -549,17 +566,14 @@ function kkullm() {
 
       if (newStatus === oldStatus) return;
 
-      // Unblock-on-edit: dragging a blocked card to a new status prompts the
-      // operator. On confirm we clear the flag atomically with the status
-      // change (?unblock=1). On cancel we revert the drag and leave it blocked.
+      // Blocked cards get a 3-way prompt: unblock-and-move (?unblock=1),
+      // move-but-keep-blocked (leave the flag set), or cancel (revert).
       let unblock = false;
       if (cardEl.dataset.blocked === 'true') {
-        if (window.confirm('This card is blocked. Unblock it as you move it to ' + newStatus + '?')) {
-          unblock = true;
-        } else {
-          this.revertDrag(evt);
-          return;
-        }
+        const choice = await this.askBlockMove(newStatus);
+        if (choice === null) { this.revertDrag(evt); return; }
+        if (choice === 'unblock') unblock = true;
+        // choice === 'keep' → proceed with the move, leave blocked flag set
       }
 
       // altHeld is tracked via document keydown/keyup + snapshotted at drag
