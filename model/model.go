@@ -51,6 +51,22 @@ type Comment struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// CardEvent is one entry in a card's append-only audit trail. v1 records
+// status transitions (event_type "status_changed") and assignee changes
+// ("assignee_added"/"assignee_removed"). The from/to fields carry the relevant
+// values per event type; the schema is generic so new event types need no
+// migration.
+type CardEvent struct {
+	ID        int       `json:"id"`
+	CardID    int       `json:"card_id"`
+	Actor     string    `json:"actor,omitempty"`
+	EventType string    `json:"event_type"`
+	FromValue string    `json:"from_value,omitempty"`
+	ToValue   string    `json:"to_value,omitempty"`
+	Forced    bool      `json:"forced"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type ProjectAsset struct {
 	ID          int       `json:"id"`
 	ProjectID   int       `json:"project_id"`
