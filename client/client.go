@@ -191,6 +191,12 @@ func (c *Client) UpdateCard(id int, req CardUpdateRequest) (*model.Card, error) 
 	return &card, err
 }
 
+func (c *Client) ListCardEvents(cardID int) ([]model.CardEvent, error) {
+	var events []model.CardEvent
+	err := c.do("GET", "/api/cards/"+strconv.Itoa(cardID)+"/events", nil, &events)
+	return events, err
+}
+
 // --- Comments ---
 
 func (c *Client) ListComments(cardID int) ([]model.Comment, error) {

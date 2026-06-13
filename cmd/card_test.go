@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/joelhelbling/kkullm/api"
+	"github.com/joelhelbling/kkullm/client"
 	"github.com/joelhelbling/kkullm/db"
 	"github.com/joelhelbling/kkullm/model"
 	"github.com/joelhelbling/kkullm/store"
@@ -214,6 +215,38 @@ func TestCardUpdateReasonWithoutFlagErrors(t *testing.T) {
 		t.Fatal("expected error when --reason given without --blocked/--unblocked")
 	}
 }
+
+func TestCardEventsCommand(t *testing.T) {
+	ts, s := newTestServer(t)
+	proj, _ := s.CreateProject("p", "")
+	card, err := s.CreateCard(store.CardCreateParams{Title: "task", ProjectID: proj.ID, Status: "considering"})
+	if err != nil {
+		t.Fatalf("CreateCard: %v", err)
+	}
+	if _, err := s.UpdateCard(card.ID, store.CardUpdateParams{Status: strPtrCmd("todo")}); err != nil {
+		t.Fatalf("UpdateCard: %v", err)
+	}
+
+	// The CLI read should succeed against the live server.
+	if err := runRoot(t, "card", "events", itoa(card.ID), "--server", ts.URL, "--json"); err != nil {
+		t.Fatalf("card events: %v", err)
+	}
+
+	// And the underlying read path returns the recorded event.
+	c := client.New(ts.URL)
+	events, err := c.ListCardEvents(card.ID)
+	if err != nil {
+		t.Fatalf("ListCardEvents: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("got %d events, want 1", len(events))
+	}
+	if events[0].EventType != "status_changed" || events[0].ToValue != "todo" {
+		t.Errorf("event = %+v, want status_changed to=todo", events[0])
+	}
+}
+
+func strPtrCmd(s string) *string { return &s }
 
 // --- helpers ---
 
