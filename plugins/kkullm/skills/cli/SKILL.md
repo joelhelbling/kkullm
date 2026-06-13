@@ -31,9 +31,12 @@ Prefer these over assuming a command's shape.
 
 The CLI follows a consistent, agent-native contract. Rely on it:
 
-- **Verbs are consistent.** `list`, `get`, `create`, `update` — every resource
-  uses the same verbs. There is no `show` and no `add`. An unknown subcommand
-  fails with a non-zero exit, so a typo never silently no-ops.
+- **Verbs are consistent.** Mutation is always `create` or `update` — nothing
+  else changes state. Reading is `list` and `get` (plus the occasional
+  resource-specific read such as `card events`, which is list-style). There is
+  no `show` and no `add`; blocking, unblocking, and forced moves are *flags on
+  `update`*, not new verbs, so the contract holds. An unknown subcommand fails
+  with a non-zero exit, so a typo never silently no-ops.
 - **`--json` everywhere.** Every data-returning command accepts `--json` and
   emits a parseable document on stdout. Pipe it to `jq`. Diagnostics and
   truncation hints go to stderr, so `--json` stdout stays a clean document.
