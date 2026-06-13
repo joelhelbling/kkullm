@@ -998,18 +998,6 @@ body::before {
 .status-pill.active-tabled { background: var(--status-tabled-tint); color: var(--status-tabled); border-color: var(--status-tabled); }
 .status-pill.active-done { background: var(--status-done-tint); color: var(--status-done); border-color: var(--status-done); }
 
-.status-pill.status-pill-disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-  border-style: dashed;
-}
-
-.status-pill.status-pill-disabled:hover {
-  background: transparent;
-  color: var(--text-secondary);
-  border-color: var(--border);
-}
-
 /* ===== Drawer ===== */
 .drawer-overlay {
   position: fixed;

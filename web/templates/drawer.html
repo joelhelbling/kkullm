@@ -41,17 +41,12 @@
       <div class="drawer-status-pills">
         <span class="status-pill active active-{{.Card.Status}}">{{.Card.Status}} ✓</span>
         {{range .StatusPills}}
-        {{if .Reachable}}
         <span class="status-pill"
               hx-patch="/ui/cards/{{$.Card.ID}}/status?response=drawer{{if $.Card.Blocked}}&unblock=1{{end}}"
               hx-vals='{"status":"{{.Status}}"}'
               {{if $.Card.Blocked}}hx-confirm="This card is blocked. Unblock it as you change the status?"{{end}}
               hx-target="#drawer-container"
               hx-swap="innerHTML">{{.Status}}</span>
-        {{else}}
-        <span class="status-pill status-pill-disabled"
-              title="Not allowed from {{$.Card.Status}}">{{.Status}}</span>
-        {{end}}
         {{end}}
       </div>
     </div>

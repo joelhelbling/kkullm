@@ -13,7 +13,6 @@ function kkullm() {
     theme: 'light',
     boardLoaded: false,
     inArchive: false,
-    altHeld: false,
     blockMove: { open: false, message: '', _resolve: null },
     // Card ids whose status THIS client just changed via drag. Used to ignore
     // the echo card_updated SSE for our own move (the drop's fetch response
@@ -44,10 +43,6 @@ function kkullm() {
       });
       this.initTheme();
       this.connectSSE();
-
-      document.addEventListener('keydown', (e) => { if (e.key === 'Alt') this.altHeld = true; });
-      document.addEventListener('keyup',   (e) => { if (e.key === 'Alt') this.altHeld = false; });
-      window.addEventListener('blur',      ()  => { this.altHeld = false; });
 
       // htmx:afterSettle runs after htmx is done manipulating attributes,
       // so our DOM edits won't be overwritten by htmx's attribute merging.
@@ -531,21 +526,6 @@ function kkullm() {
           animation: 200,
           ghostClass: 'sortable-ghost',
           chosenClass: 'sortable-chosen',
-          onStart: (evt) => {
-            const oe = evt.originalEvent;
-            if (oe && typeof oe.altKey === 'boolean') this.altHeld = oe.altKey;
-          },
-          // Track the modifier from the live dragover event. SortableJS passes
-          // the native event as onMove's 2nd arg, and dragover reliably carries
-          // altKey in all browsers — unlike the drop/dragend event at onEnd,
-          // which is unreliable in Chrome/Safari. This keeps altHeld accurate
-          // right up to the drop, immune to mid-drag blur/keyup clearing. (#71)
-          onMove: (evt, originalEvent) => {
-            if (originalEvent && typeof originalEvent.altKey === 'boolean') {
-              this.altHeld = originalEvent.altKey;
-            }
-            return true;
-          },
           onEnd: (evt) => this.onCardDrop(evt),
         });
       });
@@ -600,15 +580,8 @@ function kkullm() {
         // choice === 'keep' → proceed with the move, leave blocked flag set
       }
 
-      // altHeld is refreshed from the live dragover event (onMove) right up to
-      // the drop, plus document keydown/keyup and an onStart snapshot as
-      // fallbacks. We avoid reading evt.originalEvent.altKey here at drop time
-      // because it is unreliable in Chrome/Safari. See #62, #71.
-      const force = this.altHeld;
-
       const qs = [];
       if (unblock) qs.push('unblock=1');
-      if (force) qs.push('force=1');
       const url = '/ui/cards/' + cardId + '/status' + (qs.length ? '?' + qs.join('&') : '');
       // Suppress the self-echo card_updated SSE for this card while our own
       // drop reconciles. Cleared after a short window that covers both SSE
