@@ -4,7 +4,7 @@
 
 **Goal:** Add three installation channels for kkullm — a shared Homebrew tap, GitHub-release binary archives, and a `curl | sh` script — driven by goreleaser and a tag-triggered GitHub Actions release workflow.
 
-**Architecture:** kkullm is a single self-contained Go binary (embedded web assets + migrations, CGO-free SQLite), so it cross-compiles cleanly with `CGO_ENABLED=0`. Two small in-repo prerequisites (version ldflags wiring + a canonical XDG data directory) precede the packaging work. goreleaser builds the matrix, attaches archives + checksums to a GitHub release, and writes `Formula/kkullm.rb` into the shared `joelhelbling/homebrew-tap` repo.
+**Architecture:** kkullm is a single self-contained Go binary (embedded web assets + migrations, CGO-free SQLite), so it cross-compiles cleanly with `CGO_ENABLED=0`. Two small in-repo prerequisites (version ldflags wiring + a canonical XDG data directory) precede the packaging work. goreleaser builds the matrix, attaches archives + checksums to a GitHub release, and writes `Casks/kkullm.rb` into the shared `joelhelbling/homebrew-tap` repo.
 
 **Tech Stack:** Go 1.25.5, Cobra, modernc.org/sqlite, goreleaser v2, GitHub Actions, Task (Taskfile), POSIX sh.
 
@@ -22,7 +22,7 @@
 | `cmd/datadir_test.go` | Tests path resolution under XDG/HOME |
 | `cmd/serve.go` | `--db` default uses resolver + `KKULLM_DB`; creates data dir before opening |
 | `db/db.go` | Adds `busy_timeout` PRAGMA in `Open` |
-| `.goreleaser.yaml` | Build matrix, archives, checksums, brews → shared tap, release |
+| `.goreleaser.yaml` | Build matrix, archives, checksums, homebrew_casks → shared tap, release |
 | `.github/workflows/release.yaml` | Tag-triggered goreleaser run |
 | `install.sh` | curl-pipe installer (detect OS/arch, verify checksum, install) |
 | `Taskfile.yaml` | Version ldflags in `build`; `release-snapshot` task |
@@ -366,27 +366,29 @@ changelog:
       - Merge pull request
       - Merge branch
 
-brews:
+homebrew_casks:
   - name: kkullm
     ids:
+      - kkullm
+    binaries:
       - kkullm
     repository:
       owner: joelhelbling
       name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
     homepage: "https://github.com/joelhelbling/kkullm"
     description: "Agent orchestration system based on the blackboard pattern"
-    license: "MIT"
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
-    install: |
-      bin.install "kkullm"
-    test: |
-      system "#{bin}/kkullm", "version"
+    commit_msg_template: "Brew cask update for {{ .ProjectName }} version {{ .Tag }}"
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/kkullm"]
+          end
 
 release:
   github:
@@ -418,7 +420,7 @@ And add version ldflags to the existing `build` task `cmds` (replace the single 
 
 Run: `goreleaser release --snapshot --clean`
 (If goreleaser is not installed: `brew install goreleaser` first.)
-Expected: completes successfully; `dist/` contains four `kkullm_*_*.tar.gz` archives (linux/darwin × amd64/arm64), `checksums.txt`, and a generated formula under `dist/`. Confirm no errors about the brews block (token is only needed for actual publish, not snapshot).
+Expected: completes successfully; `dist/` contains four `kkullm_*_*.tar.gz` archives (linux/darwin × amd64/arm64), `checksums.txt`, and a generated cask (`dist/homebrew/Casks/kkullm.rb`). Confirm `goreleaser check` reports no deprecation warnings and no errors about the homebrew_casks block (token is only needed for actual publish, not snapshot).
 
 - [ ] **Step 4: Verify the embedded version in a snapshot binary**
 
@@ -691,7 +693,7 @@ git push origin v0.1.0
 
 - [ ] **Step 4: Verify the release**
 
-Confirm the GitHub release for `v0.1.0` has four `tar.gz` archives + `checksums.txt`, and that `Formula/kkullm.rb` was committed to `homebrew-tap`.
+Confirm the GitHub release for `v0.1.0` has four `tar.gz` archives + `checksums.txt`, and that `Casks/kkullm.rb` was committed to `homebrew-tap`.
 
 - [ ] **Step 5: Verify each channel on a clean machine**
 
@@ -706,6 +708,6 @@ Expected: both print `0.1.0`.
 
 ## Self-Review Notes
 
-- **Spec coverage:** version wiring (T1), XDG data dir + KKULLM_DB + dir creation (T2, T3), busy_timeout (T4), goreleaser/archives/checksums/brews-to-shared-tap/snapshot task (T5), release workflow w/ both tokens + Go 1.25.5 (T6), install.sh with checksum verify + ~/.local/bin + env overrides (T7), README install + data-dir caveat + SKILL.md review (T8), one-time tap/token setup + first release verification (T9). All spec sections mapped.
+- **Spec coverage:** version wiring (T1), XDG data dir + KKULLM_DB + dir creation (T2, T3), busy_timeout (T4), goreleaser/archives/checksums/homebrew_casks-to-shared-tap/snapshot task (T5), release workflow w/ both tokens + Go 1.25.5 (T6), install.sh with checksum verify + ~/.local/bin + env overrides (T7), README install + data-dir caveat + SKILL.md review (T8), one-time tap/token setup + first release verification (T9). All spec sections mapped.
 - **Type consistency:** `Version` (cmd) and `defaultDBPath()` (cmd) are referenced consistently across tasks and the ldflags path `github.com/joelhelbling/kkullm/cmd.Version` matches in T1, T5, T6.
 - **Non-goals respected:** no Docker, Windows, brew service, or single-instance guard.

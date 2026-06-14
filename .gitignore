@@ -13,3 +13,4 @@
 *.db-shm
 *.sqlite
 *.sqlite3
+dist/

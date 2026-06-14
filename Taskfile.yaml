@@ -13,7 +13,7 @@ tasks:
   build:
     desc: Compile the kkullm binary into the repo root
     cmds:
-      - go build -o {{.BINARY}} .
+      - go build -ldflags "-X github.com/joelhelbling/kkullm/cmd.Version=dev" -o {{.BINARY}} .
     sources:
       - '**/*.go'
       - go.mod
@@ -23,6 +23,11 @@ tasks:
       - db/migrations/**/*
     generates:
       - '{{.BINARY}}'
+
+  release-snapshot:
+    desc: Build all release artifacts locally without publishing (validates goreleaser)
+    cmds:
+      - goreleaser release --snapshot --clean
 
   clean:
     desc: Remove the compiled binary
