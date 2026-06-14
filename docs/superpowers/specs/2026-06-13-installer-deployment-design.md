@@ -43,15 +43,26 @@ personal catch-all tap: **`github.com/joelhelbling/homebrew-tap`**, referenced a
 `joelhelbling/tap` (Homebrew strips the `homebrew-` prefix). This is the conventional
 name for a personal multi-formula tap.
 
-- A tap is just a git repo with a `Formula/` directory holding one `.rb` per tool.
-- Each project's goreleaser `brews:` block points at the **same** repository and
-  writes its **own** formula file (`Formula/kkullm.rb`), so multiple projects coexist.
+- A tap is just a git repo holding one definition per tool. kkullm uses a Homebrew
+  **cask** (in `Casks/`), which is goreleaser's recommended mechanism for shipping
+  prebuilt binaries; older projects may still use a formula (in `Formula/`). The two
+  coexist in one tap.
+- Each project's goreleaser `homebrew_casks:` block points at the **same** repository
+  and writes its **own** cask file (`Casks/kkullm.rb`), so multiple projects coexist.
 - The `HOMEBREW_TAP_GITHUB_TOKEN` secret is shared across projects; it only needs
   write access to this one tap repo.
-- **glovebox migration (out of scope, future):** change glovebox's
-  `.goreleaser.yaml` brews `repository.name` from `homebrew-glovebox` →
-  `homebrew-tap`; its next release writes `Formula/glovebox.rb` into the shared tap.
-  The old `homebrew-glovebox` repo can stay in place (existing installs keep working).
+- **glovebox migration (out of scope, future):** point glovebox's `.goreleaser.yaml`
+  homebrew config at `repository.name: homebrew-tap`; its next release writes its own
+  definition into the shared tap. The old `homebrew-glovebox` repo can stay in place
+  (existing installs keep working).
+
+> **Note on casks vs. formulae:** goreleaser deprecated the `brews:` (formula) section
+> in v2.10 in favor of `homebrew_casks:`. Casks are the correct mechanism for
+> distributing prebuilt binaries. The install command is unchanged
+> (`brew install joelhelbling/tap/kkullm`); brew resolves casks transparently. Cask
+> definitions have no `license`/`test` fields, default to the `Casks/` directory, and
+> need a post-install hook to strip the macOS Gatekeeper quarantine bit from our
+> unsigned binaries.
 
 ## Prerequisite Code Changes
 
@@ -115,14 +126,16 @@ goreleaser v2 config, structured like glovebox's:
 - `checksum`: `checksums.txt`.
 - `snapshot`: `{{ incpatch .Version }}-next`.
 - `changelog`: sort asc, exclude `^docs:`, `^test:`, `^ci:`, merge commits.
-- `brews`: one entry —
+- `homebrew_casks`: one entry —
   - `name: kkullm`
+  - `ids: [kkullm]`, `binaries: [kkullm]`
   - `repository: { owner: joelhelbling, name: homebrew-tap, branch: main,
     token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}" }`
-  - `directory: Formula`
-  - `homepage`, `description`, `license: MIT`
-  - `install: bin.install "kkullm"`
-  - `test: system "#{bin}/kkullm", "version"`
+  - `homepage`, `description`
+  - `commit_author` / `commit_msg_template`
+  - `hooks.post.install`: strip the macOS quarantine bit via
+    `xattr -dr com.apple.quarantine` (binaries are unsigned)
+  - directory defaults to `Casks/`; no `license`/`test` (unsupported for casks)
 - `release`: `github: { owner: joelhelbling, name: kkullm }`, `prerelease: auto`.
 
 ### `.github/workflows/release.yaml` (new)
@@ -184,10 +197,10 @@ Documented as release prerequisites:
   and `KKULLM_DB` override; assert directory creation.
 - **Version smoke check:** `kkullm version` and `kkullm --version` print the value.
 - **goreleaser snapshot:** `task release-snapshot` builds all four platform
-  archives and generates `Formula/kkullm.rb` without publishing.
+  archives and generates the `Casks/kkullm.rb` cask without publishing.
 - **Existing suite:** `task test` continues to pass (serve/db changes covered).
 - **First real release:** push a `v0.x.0` tag, confirm the GitHub release has all
-  archives + checksums and that `Formula/kkullm.rb` lands in `homebrew-tap`; then
+  archives + checksums and that `Casks/kkullm.rb` lands in `homebrew-tap`; then
   `brew install joelhelbling/tap/kkullm` and `kkullm version` on a clean machine.
 
 ## File Summary
@@ -198,7 +211,7 @@ Documented as release prerequisites:
 | `cmd/datadir.go` | New: XDG default DB path resolver + dir creation |
 | `cmd/serve.go` | `--db` default uses resolver; honor `KKULLM_DB` |
 | `db/db.go` | Add `busy_timeout` PRAGMA in `Open` |
-| `.goreleaser.yaml` | New: builds, archives, checksum, brews → shared tap, release |
+| `.goreleaser.yaml` | New: builds, archives, checksum, homebrew_casks → shared tap, release |
 | `.github/workflows/release.yaml` | New: tag-triggered goreleaser run |
 | `install.sh` | New: curl-pipe installer |
 | `Taskfile.yaml` | Version ldflags in `build`; add `release-snapshot` |
