@@ -26,12 +26,52 @@ Kkullm is early.
 
 The blackboard works. The orchestration loop around it is under construction.
 
+## Installation
+
+### Homebrew (macOS / Linux)
+
+```sh
+brew install joelhelbling/tap/kkullm
+```
+
+### Install script
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/joelhelbling/kkullm/main/install.sh | sh
+```
+
+Pin a version with `KKULLM_VERSION=v0.1.0` or change the location with
+`INSTALL_DIR=/usr/local/bin`.
+
+### Manual
+
+Download an archive for your platform from the
+[releases page](https://github.com/joelhelbling/kkullm/releases) and place the
+`kkullm` binary on your `PATH`.
+
+### From source
+
+```sh
+go install github.com/joelhelbling/kkullm@latest
+```
+
+### Data directory
+
+`kkullm serve` stores its SQLite database at
+`$XDG_DATA_HOME/kkullm/kkullm.db` (default `~/.local/share/kkullm/kkullm.db`).
+Override with the `KKULLM_DB` environment variable or the `--db` flag.
+
+Run **one server per database**: a second `kkullm serve` on the same machine
+will fail to bind the port, and pointing two servers at the same database file
+means their live (SSE) updates won't reach each other's browsers even though the
+data stays consistent. Do not place the database on a network filesystem (NFS),
+where SQLite locking is unreliable.
+
 ## Quickstart
 
-Install and run:
+Install (see above) and run:
 
 ```bash
-go install github.com/joelhelbling/kkullm@latest
 kkullm serve
 ```
 
@@ -42,14 +82,14 @@ task build        # → ./kkullm  (equivalent to: go build -o kkullm .)
 ./kkullm serve
 ```
 
-Then open [http://localhost:7722](http://localhost:7722). On startup the server opens `kkullm.db` in the working directory, applies the SQL migrations in `db/migrations/`, and seeds a small set of demo projects and agents so the board isn't empty on first run. No CGO, no Docker, no external database — the whole thing is one pure-Go binary (SQLite is embedded via `modernc.org/sqlite`).
+Then open [http://localhost:7722](http://localhost:7722). On startup the server opens the database (see [Data directory](#data-directory) above), applies the SQL migrations in `db/migrations/`, and seeds a small set of demo projects and agents so the board isn't empty on first run. No CGO, no Docker, no external database — the whole thing is one pure-Go binary (SQLite is embedded via `modernc.org/sqlite`).
 
 `serve` takes two flags:
 
 | Flag | Default | Purpose |
 | --- | --- | --- |
 | `--addr` | `:7722` | Listen address |
-| `--db` | `kkullm.db` | SQLite database file path |
+| `--db` | `~/.local/share/kkullm/kkullm.db` | SQLite database file path (override: `KKULLM_DB`) |
 
 ```bash
 kkullm serve --addr 127.0.0.1:8080 --db /var/lib/kkullm/board.db
