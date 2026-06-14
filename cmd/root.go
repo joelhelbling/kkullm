@@ -37,6 +37,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Emit machine-readable JSON instead of text")
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Validate and preview a mutation without sending it")
 	rootCmd.PersistentFlags().IntVar(&limitFlag, "limit", 50, "Max rows for list commands (0 = unlimited)")
+	rootCmd.Version = Version
 }
 
 func envOrDefault(key, fallback string) string {
