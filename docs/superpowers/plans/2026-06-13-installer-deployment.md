@@ -708,6 +708,6 @@ Expected: both print `0.1.0`.
 
 ## Self-Review Notes
 
-- **Spec coverage:** version wiring (T1), XDG data dir + KKULLM_DB + dir creation (T2, T3), busy_timeout (T4), goreleaser/archives/checksums/brews-to-shared-tap/snapshot task (T5), release workflow w/ both tokens + Go 1.25.5 (T6), install.sh with checksum verify + ~/.local/bin + env overrides (T7), README install + data-dir caveat + SKILL.md review (T8), one-time tap/token setup + first release verification (T9). All spec sections mapped.
+- **Spec coverage:** version wiring (T1), XDG data dir + KKULLM_DB + dir creation (T2, T3), busy_timeout (T4), goreleaser/archives/checksums/homebrew_casks-to-shared-tap/snapshot task (T5), release workflow w/ both tokens + Go 1.25.5 (T6), install.sh with checksum verify + ~/.local/bin + env overrides (T7), README install + data-dir caveat + SKILL.md review (T8), one-time tap/token setup + first release verification (T9). All spec sections mapped.
 - **Type consistency:** `Version` (cmd) and `defaultDBPath()` (cmd) are referenced consistently across tasks and the ldflags path `github.com/joelhelbling/kkullm/cmd.Version` matches in T1, T5, T6.
 - **Non-goals respected:** no Docker, Windows, brew service, or single-instance guard.
