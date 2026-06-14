@@ -50,27 +50,29 @@ changelog:
       - Merge pull request
       - Merge branch
 
-brews:
+homebrew_casks:
   - name: kkullm
     ids:
       - kkullm
+    binaries:
+      - kkullm
+    homepage: "https://github.com/joelhelbling/kkullm"
+    description: "Agent orchestration system based on the blackboard pattern"
     repository:
       owner: joelhelbling
       name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
-    homepage: "https://github.com/joelhelbling/kkullm"
-    description: "Agent orchestration system based on the blackboard pattern"
-    license: "MIT"
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
-    install: |
-      bin.install "kkullm"
-    test: |
-      system "#{bin}/kkullm", "version"
+    commit_msg_template: "Brew cask update for {{ .ProjectName }} version {{ .Tag }}"
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/kkullm"]
+          end
 
 release:
   github:
