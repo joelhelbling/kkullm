@@ -734,35 +734,31 @@ function kkullm() {
       const oldStatus = oldColumn ? oldColumn.dataset.status : null;
 
       // Block-state changes alter the tile's badge markup, which a DOM move
-      // can't reproduce. Reload the board so the badge appears/clears, then
-      // refresh the drawer if it's open on this card.
+      // can't reproduce. Update in place for all views.
       const wasBlocked = cardEl.dataset.blocked === 'true';
-      // On the orchestrator Blocked view, an unblock should clear the card's
-      // blocked affordances IN PLACE and keep it listed (it filters out on the
-      // next server load) rather than reloading the regular board. (#56)
-      const blockedView = document.querySelector('#board-container [data-view="blocked"]');
-      if (blockedView && wasBlocked && !card.blocked) {
-        cardEl.removeAttribute('data-blocked');
-        cardEl.classList.remove('card-tile-blocked');
-        const badge = cardEl.querySelector('.card-blocked-badge');
-        if (badge) badge.remove();
-        const reason = cardEl.closest('.blocked-card-wrap');
-        if (reason) {
-          const reasonEl = reason.querySelector('.blocked-reason');
-          if (reasonEl) reasonEl.remove();
+      if (wasBlocked !== !!card.blocked) {
+        if (card.blocked) {
+          // Card became blocked - add the blocked affordances
+          cardEl.setAttribute('data-blocked', 'true');
+          cardEl.classList.add('card-tile-blocked');
+          const badge = document.createElement('span');
+          badge.className = 'card-blocked-badge';
+          badge.setAttribute('title', 'Blocked');
+          badge.textContent = 'Blocked';
+          // Insert before the title
+          const title = cardEl.querySelector('.card-tile-title');
+          if (title) {
+            title.parentNode.insertBefore(badge, title);
+          }
+        } else {
+          // Card was unblocked - remove the blocked affordances
+          cardEl.removeAttribute('data-blocked');
+          cardEl.classList.remove('card-tile-blocked');
+          const badge = cardEl.querySelector('.card-blocked-badge');
+          if (badge) badge.remove();
         }
         cardEl.classList.add('highlight');
         setTimeout(() => cardEl.classList.remove('highlight'), 1500);
-        if (this.drawerOpen && this.drawerCardId === card.id) {
-          htmx.ajax('GET', '/ui/cards/' + card.id + '/drawer', {
-            target: '#drawer-container',
-            swap: 'innerHTML',
-          });
-        }
-        return;
-      }
-      if (wasBlocked !== !!card.blocked) {
-        this.loadBoard();
         if (this.drawerOpen && this.drawerCardId === card.id) {
           htmx.ajax('GET', '/ui/cards/' + card.id + '/drawer', {
             target: '#drawer-container',
