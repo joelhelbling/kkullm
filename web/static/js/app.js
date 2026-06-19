@@ -738,24 +738,33 @@ function kkullm() {
       const wasBlocked = cardEl.dataset.blocked === 'true';
       if (wasBlocked !== !!card.blocked) {
         if (card.blocked) {
-          // Card became blocked - add the blocked affordances
+          // Card became blocked - add the blocked affordances.
+          // The server renders the badge as the FIRST child of .card-tile
+          // (before any formerly/project badge), so prepend matches the
+          // template and also avoids a silent no-op when .card-tile-title is
+          // missing. (#56, PR #76 review)
           cardEl.setAttribute('data-blocked', 'true');
           cardEl.classList.add('card-tile-blocked');
           const badge = document.createElement('span');
           badge.className = 'card-blocked-badge';
           badge.setAttribute('title', 'Blocked');
           badge.textContent = 'Blocked';
-          // Insert before the title
-          const title = cardEl.querySelector('.card-tile-title');
-          if (title) {
-            title.parentNode.insertBefore(badge, title);
-          }
+          cardEl.prepend(badge);
         } else {
-          // Card was unblocked - remove the blocked affordances
+          // Card was unblocked - remove the blocked affordances.
           cardEl.removeAttribute('data-blocked');
           cardEl.classList.remove('card-tile-blocked');
           const badge = cardEl.querySelector('.card-blocked-badge');
           if (badge) badge.remove();
+          // On the orchestrator Blocked view (blocked_view.html) each tile is
+          // wrapped in .blocked-card-wrap with a .blocked-reason panel
+          // rendered below it. Drop that panel too so it doesn't linger
+          // (with its blocked-colored border) beneath the now-unblocked tile.
+          const wrap = cardEl.closest('.blocked-card-wrap');
+          if (wrap) {
+            const reasonEl = wrap.querySelector('.blocked-reason');
+            if (reasonEl) reasonEl.remove();
+          }
         }
         cardEl.classList.add('highlight');
         setTimeout(() => cardEl.classList.remove('highlight'), 1500);
