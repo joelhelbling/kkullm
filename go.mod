@@ -1,6 +1,8 @@
 module github.com/joelhelbling/kkullm
 
-go 1.26.2
+go 1.26.0
+
+toolchain go1.26.2
 
 require (
 	github.com/alecthomas/chroma/v2 v2.2.0
