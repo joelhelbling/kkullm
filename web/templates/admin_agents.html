@@ -9,8 +9,10 @@
 <ul class="admin-list">
 {{range .Agents}}
   <li class="admin-row" data-agent-id="{{.ID}}" data-agent-name="{{.Name}}" data-agent-bio="{{.Bio}}" data-agent-project="{{.Project}}">
-    <span class="admin-name">{{.Name}}</span>
-    <span class="admin-meta">project: {{.Project}}</span>
+    <div class="admin-info">
+      <span class="admin-name">{{.Name}}</span>
+      <span class="admin-meta">project: {{.Project}}</span>
+    </div>
     <span class="admin-row-actions">
       <button type="button" class="btn-small" onclick="openAgentModal('edit', this.closest('.admin-row'))">Edit</button>
       <form method="post" action="/admin/agents/{{.ID}}/delete" class="admin-delete-form">

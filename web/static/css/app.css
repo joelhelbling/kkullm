@@ -2250,7 +2250,7 @@ body::before {
 
 .admin-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 20px;
   padding: 16px 18px;
@@ -2264,6 +2264,13 @@ body::before {
 .admin-row:hover {
   background: var(--bg-card-hover);
   border-color: var(--border);
+}
+
+.admin-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .admin-name {
@@ -2280,7 +2287,7 @@ body::before {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-tertiary);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .btn-small {

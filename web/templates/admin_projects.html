@@ -9,8 +9,10 @@
 <ul class="admin-list">
 {{range .Projects}}
   <li class="admin-row" data-project-id="{{.ID}}" data-project-name="{{.Name}}" data-project-description="{{.Description}}">
-    <span class="admin-name">{{.Name}}</span>
-    <span class="admin-meta">{{.CardCount}} cards · {{.AgentCount}} agents</span>
+    <div class="admin-info">
+      <span class="admin-name">{{.Name}}</span>
+      <span class="admin-meta">{{.CardCount}} cards · {{.AgentCount}} agents</span>
+    </div>
     <span class="admin-row-actions">
       <button type="button" class="btn-small" onclick="openProjectModal('edit', this.closest('.admin-row'))">Edit</button>
       <button type="button" class="btn-outlined-danger" onclick="openDeleteProjectModal(this)">Delete</button>

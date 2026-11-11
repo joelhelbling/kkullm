@@ -9,8 +9,10 @@
 <ul class="admin-list">
 {{range .Assets}}
   <li class="admin-row" data-asset-id="{{.ID}}" data-asset-name="{{.Name}}" data-asset-description="{{.Description}}" data-asset-url="{{.URL}}" data-asset-project="{{.Project}}">
-    <span class="admin-name">{{.Name}}</span>
-    <span class="admin-meta">project: {{.Project}}{{if .URL}} · <a href="{{.URL}}" target="_blank" rel="noopener noreferrer">{{.URL}}</a>{{end}}</span>
+    <div class="admin-info">
+      <span class="admin-name">{{.Name}}</span>
+      <span class="admin-meta">project: {{.Project}}{{if .URL}} · <a href="{{.URL}}" target="_blank" rel="noopener noreferrer">{{.URL}}</a>{{end}}</span>
+    </div>
     <span class="admin-row-actions">
       <button type="button" class="btn-small" onclick="openAssetModal('edit', this.closest('.admin-row'))">Edit</button>
       <form method="post" action="/admin/assets/{{.ID}}/delete" class="admin-delete-form">
