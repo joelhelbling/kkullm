@@ -116,6 +116,15 @@ func (s *Store) CountCardsForProject(projectID int) (int, error) {
 	return n, nil
 }
 
+func (s *Store) CountAssetsForProject(projectID int) (int, error) {
+	var n int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM project_assets WHERE project_id = ?", projectID).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count assets for project %d: %w", projectID, err)
+	}
+	return n, nil
+}
+
 func (s *Store) CountAgentsForProject(projectID int) (int, error) {
 	var n int
 	err := s.db.QueryRow("SELECT COUNT(*) FROM agents WHERE project_id = ?", projectID).Scan(&n)

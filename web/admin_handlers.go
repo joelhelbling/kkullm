@@ -19,6 +19,7 @@ type adminProjectRow struct {
 	Description string
 	CardCount   int
 	AgentCount  int
+	AssetCount  int
 }
 
 // adminProjectForm carries the values a user submitted, so an error
@@ -107,9 +108,13 @@ func (ws *WebServer) projectsPageData() (adminProjectsData, error) {
 		if err != nil {
 			return adminProjectsData{}, err
 		}
+		asc, err := ws.store.CountAssetsForProject(p.ID)
+		if err != nil {
+			return adminProjectsData{}, err
+		}
 		rows = append(rows, adminProjectRow{
 			ID: p.ID, Name: p.Name, Description: p.Description,
-			CardCount: cc, AgentCount: ac,
+			CardCount: cc, AgentCount: ac, AssetCount: asc,
 		})
 	}
 	return adminProjectsData{Section: "projects", Projects: rows}, nil

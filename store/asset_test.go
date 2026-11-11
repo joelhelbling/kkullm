@@ -148,6 +148,25 @@ func TestDeleteAsset(t *testing.T) {
 	}
 }
 
+func TestCountAssetsForProject(t *testing.T) {
+	s := setupTestDB(t)
+	proj := createTestProject(t, s)
+
+	s.CreateAsset(proj.ID, "A", "", "")
+	s.CreateAsset(proj.ID, "B", "", "")
+
+	n, err := s.CountAssetsForProject(proj.ID)
+	if err != nil {
+		t.Fatalf("CountAssetsForProject: %v", err)
+	}
+	if n != 2 {
+		t.Errorf("count = %d, want 2", n)
+	}
+	if n, _ := s.CountAssetsForProject(99999); n != 0 {
+		t.Errorf("count for unknown project = %d, want 0", n)
+	}
+}
+
 func TestDeleteAssetNotFound(t *testing.T) {
 	s := setupTestDB(t)
 	if err := s.DeleteAsset(99999); err == nil {
